@@ -55,7 +55,7 @@ runs/
 *.pt
 *.pth
 *.ckpt
-checkpoints/zerograsp_cvpr2025/zerograsp_demo.ckpt
+!checkpoints/zerograsp_cvpr2025/need_to_be_replaced.ckpt
 
 # Generic generated outputs
 output/
