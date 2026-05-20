@@ -1,0 +1,31 @@
+{
+  "package_name": "zerograsp_mainline_minimal",
+  "built_at_utc": "2026-05-09T11:30:32.151173+00:00",
+  "source_root": "/home/zyc/Projects/ZeroGrasp",
+  "checkpoint": "/home/zyc/Projects/ZeroGrasp/checkpoints/zerograsp_cvpr2025/zerograsp_demo.ckpt",
+  "kept_paths": [
+    "demo.py",
+    "main.py",
+    "configs/demo.yaml",
+    "zerograsp/",
+    "ofe/",
+    "checkpoints/zerograsp_cvpr2025/zerograsp_demo.ckpt",
+    "run_mainline.py",
+    "examples/demo_input/000.*",
+    "third_party/octree_feature_extractor/",
+    "docker/Dockerfile",
+    "docker/build_image.sh",
+    "docker/run_mainline_in_docker.sh",
+    ".dockerignore",
+    "requirements.upstream.txt",
+    "LICENSE.md",
+    "README.md"
+  ],
+  "dropped_categories": [
+    "isaacsim scripts",
+    "preexp experiment outputs",
+    "training helpers",
+    "batch-eval wrappers",
+    "extra demo samples"
+  ]
+}

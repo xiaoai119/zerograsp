@@ -1,0 +1,65 @@
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-devel
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    TORCH_CUDA_ARCH_LIST=8.6 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/opt/zerograsp \
+    NVIDIA_DRIVER_CAPABILITIES=all
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      cmake \
+      ffmpeg \
+      git \
+      libegl1 \
+      libgl1 \
+      libglib2.0-0 \
+      libglvnd0 \
+      libsm6 \
+      libvulkan1 \
+      libx11-6 \
+      libxau6 \
+      libxcb1 \
+      libxcursor1 \
+      libxdmcp6 \
+      libxext6 \
+      libxfixes3 \
+      libxi6 \
+      libxinerama1 \
+      libxrandr2 \
+      libxrender1 \
+      libxxf86vm1 \
+      mesa-vulkan-drivers \
+      ninja-build \
+      vulkan-tools && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/zerograsp
+COPY . /opt/zerograsp
+
+RUN grep -Ev '^(dwconv|ocnn) @ ' requirements.upstream.txt > /tmp/requirements.upstream.filtered.txt
+
+RUN python -m pip install --upgrade pip && \
+    python -m pip install \
+      --index-url https://download.pytorch.org/whl/cu121 \
+      torch==2.2.0 \
+      torchvision==0.17.0 && \
+    python -m pip install \
+      torch-scatter \
+      -f https://data.pyg.org/whl/torch-2.2.0+cu121.html && \
+    python -m pip install \
+      torch-cluster \
+      -f https://data.pyg.org/whl/torch-2.2.0+cu121.html && \
+    python -m pip install --no-build-isolation \
+      "dwconv @ git+https://github.com/octree-nn/dwconv.git@ae53057eaf36dab01aa2727fcc93a749fd995af5#egg=dwconv" \
+      "ocnn @ git+https://github.com/octree-nn/ocnn-pytorch.git" && \
+    python -m pip install --no-build-isolation -r /tmp/requirements.upstream.filtered.txt && \
+    python -m pip install graspnetAPI --no-deps && \
+    python -m pip install transforms3d==0.4.2 autolab_core cvxopt grasp_nms && \
+    python -m pip install mani_skill==3.0.1 gymnasium==1.3.0 sapien==3.0.3 imageio==2.37.3 imageio-ffmpeg==0.6.0 && \
+    cd third_party/octree_feature_extractor && \
+    python setup.py install
+
+ENTRYPOINT ["python", "-m", "maniskill_codex.run_full_pipeline", "--no-conda"]
