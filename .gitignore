@@ -84,6 +84,12 @@ maniskill_curobo/logs/
 maniskill_curobo/smoke_tests/
 maniskill_curobo/datasets/
 
+# GraspNet baseline integration generated artifacts and local dependencies
+maniskill_curobo_graspnet/checkpoints/
+maniskill_curobo_graspnet/envs/
+maniskill_curobo_graspnet/external/
+maniskill_curobo_graspnet/runs/
+
 # Local datasets and large generated training data
 datasets/
 data/

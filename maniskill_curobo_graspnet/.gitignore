@@ -1,0 +1,6 @@
+checkpoints/
+envs/
+external/
+runs/
+__pycache__/
+tests/__pycache__/
