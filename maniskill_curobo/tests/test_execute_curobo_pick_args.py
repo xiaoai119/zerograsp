@@ -13,11 +13,13 @@ from maniskill_curobo.scripts.execute_curobo_pick import (
     ControlPose,
     MotionConfig,
     append_planning_diagnostic,
+    apply_grasp_depth_offset,
     apply_hand_tcp_calibration,
     build_planning_diagnostic,
     build_control_pose_marker_geometry,
     build_stage_targets,
     copy_zerograsp_output,
+    grasp_depth_attempt_scales,
     parse_args,
     repeat_last_action,
     save_grasp_projection,
@@ -36,6 +38,32 @@ class ExecuteCuroboPickArgsTest(unittest.TestCase):
         self.assertEqual(args.mask_mode, "task-target")
         self.assertEqual(args.camera_eye, [-0.30, 0.0, 0.55])
         self.assertEqual(args.camera_target, [0.05, 0.0, 0.08])
+        self.assertEqual(args.grasp_depth_scale, 0.0)
+        self.assertEqual(args.grasp_depth_max_offset, 0.04)
+        self.assertFalse(args.grasp_depth_auto_fallback)
+        self.assertEqual(
+            args.grasp_depth_fallback_fractions,
+            [1.0, 0.75, 0.5, 0.25, 0.0],
+        )
+
+    def test_grasp_depth_options_are_configurable(self) -> None:
+        args = parse_args(
+            [
+                "--target-base",
+                "0.5",
+                "0.0",
+                "0.2",
+                "--grasp-depth-scale",
+                "1.0",
+                "--grasp-depth-max-offset",
+                "0.03",
+                "--grasp-depth-auto-fallback",
+            ]
+        )
+
+        self.assertEqual(args.grasp_depth_scale, 1.0)
+        self.assertEqual(args.grasp_depth_max_offset, 0.03)
+        self.assertTrue(args.grasp_depth_auto_fallback)
 
     def test_grasp_marker_is_enabled_by_default(self) -> None:
         args = parse_args(["--target-base", "0.5", "0.0", "0.2"])
@@ -126,6 +154,86 @@ class ExecuteCuroboPickArgsTest(unittest.TestCase):
         np.testing.assert_allclose(targets["grasp"]["position"], np.array([0.5, 0.0, 0.3]))
         np.testing.assert_allclose(targets["pre"]["position"], np.array([0.5, 0.0, 0.1]))
         np.testing.assert_allclose(targets["lift"]["position"], np.array([0.5, 0.0, 0.6]))
+
+    def test_grasp_depth_moves_tcp_forward_along_approach_axis(self) -> None:
+        control_pose = ControlPose(
+            position_base=np.array([0.5, 0.0, 0.2], dtype=np.float64),
+            rotation_base_tool=np.eye(3, dtype=np.float64),
+            quaternion_wxyz=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+            approach_axis_base=np.array([0.0, 0.0, -1.0], dtype=np.float64),
+        )
+
+        adjusted, manifest = apply_grasp_depth_offset(
+            control_pose,
+            depth_m=0.03,
+            scale=0.5,
+            max_offset_m=0.04,
+            workspace_z_min=0.01,
+        )
+
+        np.testing.assert_allclose(adjusted.position_base, np.array([0.5, 0.0, 0.185]))
+        self.assertAlmostEqual(manifest["requested_offset_m"], 0.015)
+        self.assertAlmostEqual(manifest["applied_distance_m"], 0.015)
+        self.assertFalse(manifest["workspace_clamped"])
+
+    def test_grasp_depth_offset_is_limited_and_workspace_clamped(self) -> None:
+        control_pose = ControlPose(
+            position_base=np.array([0.5, 0.0, 0.02], dtype=np.float64),
+            rotation_base_tool=np.eye(3, dtype=np.float64),
+            quaternion_wxyz=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+            approach_axis_base=np.array([0.0, 0.0, -1.0], dtype=np.float64),
+        )
+
+        adjusted, manifest = apply_grasp_depth_offset(
+            control_pose,
+            depth_m=0.04,
+            scale=1.0,
+            max_offset_m=0.03,
+            workspace_z_min=0.01,
+        )
+
+        np.testing.assert_allclose(adjusted.position_base, np.array([0.5, 0.0, 0.01]))
+        self.assertAlmostEqual(manifest["requested_offset_m"], 0.03)
+        self.assertAlmostEqual(manifest["applied_distance_m"], 0.01)
+        self.assertTrue(manifest["workspace_clamped"])
+
+    def test_pregrasp_can_remain_anchored_to_zero_depth_pose(self) -> None:
+        zero_pose = ControlPose(
+            position_base=np.array([0.5, 0.0, 0.2], dtype=np.float64),
+            rotation_base_tool=np.eye(3, dtype=np.float64),
+            quaternion_wxyz=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+            approach_axis_base=np.array([1.0, 0.0, 0.0], dtype=np.float64),
+        )
+        depth_pose, _ = apply_grasp_depth_offset(
+            zero_pose,
+            depth_m=0.04,
+            scale=1.0,
+            max_offset_m=0.04,
+            workspace_z_min=0.01,
+        )
+
+        targets = build_stage_targets(
+            depth_pose,
+            MotionConfig(pregrasp_offset_m=0.1, lift_offset_m=0.15),
+            pregrasp_control_pose=zero_pose,
+        )
+
+        np.testing.assert_allclose(targets["pre"]["position"], [0.4, 0.0, 0.2])
+        np.testing.assert_allclose(targets["grasp"]["position"], [0.54, 0.0, 0.2])
+
+    def test_grasp_depth_attempt_scales_are_progressively_shallower(self) -> None:
+        self.assertEqual(
+            grasp_depth_attempt_scales(1.0, [1.0, 0.75, 0.5, 0.25, 0.0]),
+            [1.0, 0.75, 0.5, 0.25, 0.0],
+        )
+        self.assertEqual(
+            grasp_depth_attempt_scales(0.5, [1.0, 0.5, 0.0]),
+            [0.5, 0.25, 0.0],
+        )
+
+    def test_grasp_depth_attempt_scales_reject_invalid_fractions(self) -> None:
+        with self.assertRaises(ValueError):
+            grasp_depth_attempt_scales(1.0, [1.2])
 
     def test_grasp_settle_holds_the_closed_gripper_action(self) -> None:
         grasp_actions = np.array(

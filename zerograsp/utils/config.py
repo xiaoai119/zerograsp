@@ -119,6 +119,30 @@ def parse_config(config_file_path=None):
     parser.add_argument('--use_aug', default=False, action='store_true', help='Use augmentation')
     parser.add_argument('--fine_tuning', default=False, action='store_true', help='Enable fine tuning (freeze an encoder)')
     parser.add_argument('--fine_tuning_decoder', default=False, action='store_true', help='Enable fine tuning (freeze an decoder)')
+    parser.add_argument('--use_sparse_grasp_mask', default=False, action='store_true',
+                        help='Read grasp_mask.npz and apply per-dimension masked grasp losses')
+    parser.add_argument('--freeze_image_encoder', default=False, action='store_true',
+                        help='Freeze the 2D image backbone during fine-tuning')
+    parser.add_argument('--freeze_reconstruction_branch', default=False, action='store_true',
+                        help='Freeze reconstruction/occupancy trunk modules during fine-tuning')
+    parser.add_argument('--train_grasp_head_only', default=False, action='store_true',
+                        help='Freeze all modules except ZeroGrasp prediction heads')
+    parser.add_argument('--grasp_head_only_loss', default=False, action='store_true',
+                        help='When fine-tuning only grasp heads, optimize only grasp-related losses')
+    parser.add_argument('--use_grasp_distillation', default=False, action='store_true',
+                        help='Preserve pretrained grasp predictions on unlabeled sparse-SFT dimensions')
+    parser.add_argument('--distill_checkpoint', type=str, default=None,
+                        help='Teacher checkpoint for grasp distillation. Defaults to --checkpoint.')
+    parser.add_argument('--distill_weight', type=float, default=0.0,
+                        help='Weight for pretrained grasp prediction distillation loss')
+    parser.add_argument('--use_grasp_topk_distillation', default=False, action='store_true',
+                        help='Preserve teacher top-K grasp-score ordering on unlabeled points')
+    parser.add_argument('--distill_topk', type=int, default=64,
+                        help='Number of teacher/student high-score points per sample for ranking distillation')
+    parser.add_argument('--distill_topk_weight', type=float, default=0.0,
+                        help='Weight for top-K grasp-score ranking distillation')
+    parser.add_argument('--distill_temperature', type=float, default=0.1,
+                        help='Softmax temperature for top-K ranking distillation')
     parser.add_argument('--use_collision_constraints', default=False, action='store_true', help='Use collision constraint')
     parser.add_argument('--use_collision_detection', default=False, action='store_true', help='Use collision detector')
     parser.add_argument('--use_collision_detection_only_with_depth_map', default=False, action='store_true', help='Use collision detector')

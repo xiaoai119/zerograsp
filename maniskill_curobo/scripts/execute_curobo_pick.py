@@ -90,22 +90,36 @@ class VideoRecorder:
     def __init__(self, output_path: Path | None, fps: int):
         self.output_path = output_path
         self.fps = int(fps)
-        self.frames: list[np.ndarray] = []
+        self.frame_count = 0
+        self._writer: Any | None = None
+        self._closed = False
 
     def capture(self, env: Any) -> None:
         if self.output_path is None:
             return
-        self.frames.append(normalize_rgb_frame(env.render()))
+        if self._closed:
+            raise RuntimeError(f"Cannot capture after video writer was closed: {self.output_path}")
+        if self._writer is None:
+            self.output_path.parent.mkdir(parents=True, exist_ok=True)
+            import imageio.v2 as iio
 
-    def save(self) -> Path | None:
+            self._writer = iio.get_writer(str(self.output_path), fps=self.fps)
+        self._writer.append_data(normalize_rgb_frame(env.render()))
+        self.frame_count += 1
+
+    def save(self, *, allow_empty: bool = False) -> Path | None:
         if self.output_path is None:
             return None
-        if not self.frames:
+        if self.frame_count == 0:
+            if not self._closed and self._writer is not None:
+                self._writer.close()
+                self._closed = True
+            if allow_empty:
+                return None
             raise RuntimeError(f"No frames captured for {self.output_path}.")
-        self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        import imageio.v3 as iio
-
-        iio.imwrite(self.output_path, np.stack(self.frames, axis=0), fps=self.fps)
+        if not self._closed and self._writer is not None:
+            self._writer.close()
+            self._closed = True
         return self.output_path
 
 
@@ -184,6 +198,40 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--lift-offset", type=float, default=0.15)
     parser.add_argument("--workspace-z-min", type=float, default=DEFAULT_WORKSPACE_Z_MIN)
     parser.add_argument(
+        "--grasp-depth-scale",
+        type=float,
+        default=0.0,
+        help=(
+            "Move the commanded TCP target forward along the ZeroGrasp approach axis "
+            "by depth_m times this scale. Use 1.0 to apply the full predicted depth; "
+            "the default 0.0 preserves the legacy translation-only behavior."
+        ),
+    )
+    parser.add_argument(
+        "--grasp-depth-max-offset",
+        type=float,
+        default=0.04,
+        help="Maximum TCP position offset produced by --grasp-depth-scale, in meters.",
+    )
+    parser.add_argument(
+        "--grasp-depth-auto-fallback",
+        action="store_true",
+        help=(
+            "If grasp planning fails, retry progressively shallower depth offsets. "
+            "The pre-grasp target remains anchored to the zero-depth grasp."
+        ),
+    )
+    parser.add_argument(
+        "--grasp-depth-fallback-fractions",
+        type=float,
+        nargs="+",
+        default=[1.0, 0.75, 0.5, 0.25, 0.0],
+        help=(
+            "Fractions of --grasp-depth-scale attempted by automatic fallback. "
+            "The requested scale is always tried first."
+        ),
+    )
+    parser.add_argument(
         "--no-hand-tcp-calibration",
         dest="use_hand_tcp_calibration",
         action="store_false",
@@ -194,6 +242,12 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--gripper-closed", type=float, default=-1.0)
     parser.add_argument("--close-steps", type=int, default=30)
     parser.add_argument("--settle-steps", type=int, default=20)
+    parser.add_argument(
+        "--settle-before-export-steps",
+        type=int,
+        default=0,
+        help="Hold the robot still for this many env steps after reset before saving ZeroGrasp input or planning.",
+    )
     parser.add_argument("--action-repeat", type=int, default=2)
     parser.add_argument("--max-waypoints-per-stage", type=int, default=120)
     parser.add_argument(
@@ -201,6 +255,14 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         choices=("pre", "grasp", "lift"),
         default=None,
         help="Stop after this motion stage and save the partial execution video.",
+    )
+    parser.add_argument(
+        "--planning-only",
+        action="store_true",
+        help=(
+            "Plan pre-grasp, grasp, and lift from chained planned joint states "
+            "without stepping the ManiSkill environment."
+        ),
     )
     parser.add_argument("--robot-config", default="franka.yml", help="cuRobo robot config.")
     parser.add_argument("--scene-model", default="collision_test.yml", help="cuRobo scene model.")
@@ -228,12 +290,33 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--video-fps", type=int, default=20)
     parser.add_argument("--video-out", default=None, help="Optional explicit MP4 path.")
     parser.add_argument(
+        "--no-video",
+        action="store_true",
+        help="Disable video frame capture and MP4 writing for faster rollouts.",
+    )
+    parser.add_argument(
         "--no-grasp-marker",
         dest="show_grasp_marker",
         action="store_false",
         help="Do not draw the ZeroGrasp center/approach/width marker in the scene video.",
     )
     parser.set_defaults(show_grasp_marker=True)
+    parser.add_argument(
+        "--marker-grasp-center-base",
+        type=float,
+        nargs=3,
+        default=None,
+        help=(
+            "Optional extra grasp-center marker in robot base coordinates. "
+            "Useful with --target-base, where the target is the panda_hand goal."
+        ),
+    )
+    parser.add_argument(
+        "--marker-width",
+        type=float,
+        default=None,
+        help="Optional gripper width used for debug markers.",
+    )
     parser.add_argument(
         "--output-dir",
         default=None,
@@ -254,25 +337,42 @@ def main(argv: Iterable[str] | None = None) -> int:
     diagnostics_path = output_dir / "planning_diagnostics.json"
     if diagnostics_path.exists():
         diagnostics_path.unlink()
-    video_path = Path(args.video_out).expanduser().resolve() if args.video_out else output_dir / "execution.mp4"
+    video_path = None if args.no_video else Path(args.video_out).expanduser().resolve() if args.video_out else output_dir / "execution.mp4"
 
     env = build_env(args)
-    recorder = VideoRecorder(video_path, fps=args.video_fps)
+    recorder = None if args.no_video else VideoRecorder(video_path, fps=args.video_fps)
     manifest: dict[str, Any] = {
         "args": vars(args),
         "output_dir": str(output_dir),
         "zg_input_dir": str(output_dir / "zg_input"),
         "zg_output_dir": str(output_dir / "zg_output") if args.zerograsp_output else None,
         "projection_path": str(output_dir / "grasp_projection.png") if args.zerograsp_output else None,
-        "video_path": str(video_path),
+        "video_path": str(video_path) if video_path else None,
+        "video_enabled": not bool(args.no_video),
         "planning_diagnostics_path": str(diagnostics_path),
+        "planning_only": bool(args.planning_only),
         "stages": [],
     }
+    object_trace: list[dict[str, Any]] = []
+    final_info: dict[str, Any] = {}
     try:
         obs, _ = env.reset(seed=args.seed)
         robot = env.unwrapped.agent.robot
         active_joint_names = [joint.name for joint in robot.get_active_joints()]
         print(f"active_joint_names={active_joint_names}")
+        object_trace.append(object_lift_trace_sample(env, "reset"))
+        if args.settle_before_export_steps > 0:
+            obs, settle_info = settle_environment(
+                env,
+                steps=args.settle_before_export_steps,
+                recorder=recorder,
+                gripper=args.gripper_open,
+            )
+            manifest["settle_before_export"] = {
+                "steps": int(args.settle_before_export_steps),
+                "final_info": sanitize_for_json(settle_info),
+            }
+            object_trace.append(object_lift_trace_sample(env, "after_settle_before_export"))
 
         zg_input_dir = save_current_zerograsp_input(obs, env, args, output_dir / "zg_input")
         print(f"zg_input={zg_input_dir}")
@@ -292,7 +392,11 @@ def main(argv: Iterable[str] | None = None) -> int:
             manifest["projection_path"] = str(projection_path)
             print(f"grasp_projection={projection_path}")
 
-        control_pose, grasp_manifest = load_control_pose(env, args, effective_zerograsp_output)
+        control_pose, zero_depth_control_pose, grasp_manifest = load_control_pose(
+            env,
+            args,
+            effective_zerograsp_output,
+        )
         manifest["grasp"] = grasp_manifest
         scene_model = prepare_curobo_scene_model(
             env=env,
@@ -304,19 +408,58 @@ def main(argv: Iterable[str] | None = None) -> int:
         manifest["curobo_scene"] = scene_model["manifest"]
         marker_actors = []
         if args.show_grasp_marker:
-            marker_geometry = build_control_pose_marker_geometry(
-                control_pose=control_pose,
-                world_from_base_matrix=robot_base_matrix(env),
-                width_m=float(grasp_manifest.get("width_m", 0.08) or 0.08),
-            )
-            marker_actors = add_grasp_marker_to_scene(env.unwrapped.scene, marker_geometry)
-            manifest["grasp_marker"] = marker_manifest(marker_geometry, len(marker_actors))
-            print(
-                "grasp_marker "
-                f"center={np.round(marker_geometry.center_world, 4).tolist()} "
-                f"approach={np.round(marker_geometry.approach_axis_world, 4).tolist()} "
-                f"width_axis={np.round(marker_geometry.width_axis_world, 4).tolist()}"
-            )
+            marker_width = float(args.marker_width if args.marker_width is not None else grasp_manifest.get("width_m", 0.08) or 0.08)
+            if args.marker_grasp_center_base is None:
+                marker_geometry = build_control_pose_marker_geometry(
+                    control_pose=control_pose,
+                    world_from_base_matrix=robot_base_matrix(env),
+                    width_m=marker_width,
+                )
+                marker_actors = add_grasp_marker_to_scene(env.unwrapped.scene, marker_geometry)
+                manifest["grasp_marker"] = marker_manifest(marker_geometry, len(marker_actors))
+                print(
+                    "grasp_marker "
+                    f"center={np.round(marker_geometry.center_world, 4).tolist()} "
+                    f"approach={np.round(marker_geometry.approach_axis_world, 4).tolist()} "
+                    f"width_axis={np.round(marker_geometry.width_axis_world, 4).tolist()}"
+                )
+            else:
+                manifest["grasp_marker"] = {
+                    "enabled": False,
+                    "reason": "suppressed_when_grasp_center_marker_is_available",
+                }
+            if args.marker_grasp_center_base is not None:
+                grasp_center_pose = ControlPose(
+                    position_base=clamp_base_target(
+                        np.asarray(args.marker_grasp_center_base, dtype=np.float64).reshape(3),
+                        args.workspace_z_min,
+                    ),
+                    rotation_base_tool=control_pose.rotation_base_tool,
+                    quaternion_wxyz=control_pose.quaternion_wxyz,
+                    approach_axis_base=control_pose.approach_axis_base,
+                )
+                grasp_center_geometry = build_control_pose_marker_geometry(
+                    control_pose=grasp_center_pose,
+                    world_from_base_matrix=robot_base_matrix(env),
+                    width_m=marker_width,
+                    approach_length=0.05,
+                )
+                center_actors = add_grasp_marker_to_scene(
+                    env.unwrapped.scene,
+                    grasp_center_geometry,
+                    name_prefix="zerograsp_grasp_center_marker",
+                    center_color=[0.0, 1.0, 1.0, 0.9],
+                    approach_color=[1.0, 0.4, 0.0, 0.9],
+                    width_color=[0.75, 0.0, 1.0, 0.9],
+                )
+                marker_actors.extend(center_actors)
+                manifest["grasp_center_marker"] = marker_manifest(grasp_center_geometry, len(center_actors))
+                print(
+                    "grasp_center_marker "
+                    f"center={np.round(grasp_center_geometry.center_world, 4).tolist()} "
+                    f"approach={np.round(grasp_center_geometry.approach_axis_world, 4).tolist()} "
+                    f"width_axis={np.round(grasp_center_geometry.width_axis_world, 4).tolist()}"
+                )
         else:
             manifest["grasp_marker"] = {"enabled": False}
         motion = MotionConfig(
@@ -326,7 +469,11 @@ def main(argv: Iterable[str] | None = None) -> int:
             gripper_open=args.gripper_open,
             gripper_closed=args.gripper_closed,
         )
-        targets = build_stage_targets(control_pose, motion)
+        targets = build_stage_targets(
+            control_pose,
+            motion,
+            pregrasp_control_pose=zero_depth_control_pose,
+        )
         manifest["stage_targets"] = {
             name: {
                 "position_base": target["position"].tolist(),
@@ -345,26 +492,126 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         qpos = first_vector(robot.get_qpos(), "robot qpos")
         q_start = ordered_values(active_joint_names, qpos, planner.joint_names).astype(np.float32)
-        recorder.capture(env)
+        if recorder is not None:
+            recorder.capture(env)
 
         stages: list[tuple[str, float]] = [
             ("pre", motion.gripper_open),
             ("grasp", motion.gripper_open),
             ("lift", motion.gripper_closed),
         ]
-        final_info: dict[str, Any] = {}
         for stage_name, gripper in stages:
-            target = targets[stage_name]
-            planned = plan_stage(
-                planner=planner,
-                q_start=q_start,
-                target_position=target["position"],
-                target_quaternion=target["quaternion"],
-                output_dir=output_dir,
-                stage_name=stage_name,
-                diagnostics_path=diagnostics_path,
-            )
+            if stage_name == "grasp" and args.grasp_depth_auto_fallback:
+                grasp_manifest.setdefault(
+                    "grasp_depth_offset_requested",
+                    dict(grasp_manifest.get("grasp_depth_offset") or {}),
+                )
+                attempts = []
+                planned = None
+                selected_pose = None
+                selected_offset = None
+                for depth_scale in grasp_depth_attempt_scales(
+                    args.grasp_depth_scale,
+                    args.grasp_depth_fallback_fractions,
+                ):
+                    candidate_pose, candidate_offset = apply_grasp_depth_offset(
+                        zero_depth_control_pose,
+                        depth_m=float(grasp_manifest.get("depth_m", 0.0) or 0.0),
+                        scale=depth_scale,
+                        max_offset_m=args.grasp_depth_max_offset,
+                        workspace_z_min=args.workspace_z_min,
+                    )
+                    candidate_targets = build_stage_targets(
+                        candidate_pose,
+                        motion,
+                        pregrasp_control_pose=zero_depth_control_pose,
+                    )
+                    candidate_target = candidate_targets["grasp"]
+                    try:
+                        planned = plan_stage(
+                            planner=planner,
+                            q_start=q_start,
+                            target_position=candidate_target["position"],
+                            target_quaternion=candidate_target["quaternion"],
+                            output_dir=output_dir,
+                            stage_name=stage_name,
+                            diagnostics_path=diagnostics_path,
+                            diagnostic_metadata={
+                                "depth_scale": depth_scale,
+                                "depth_offset_m": candidate_offset["applied_distance_m"],
+                            },
+                        )
+                    except RuntimeError as exc:
+                        attempts.append(
+                            {
+                                "scale": depth_scale,
+                                "offset_m": candidate_offset["applied_distance_m"],
+                                "success": False,
+                                "failure_reason": str(exc),
+                            }
+                        )
+                        continue
+                    attempts.append(
+                        {
+                            "scale": depth_scale,
+                            "offset_m": candidate_offset["applied_distance_m"],
+                            "success": True,
+                        }
+                    )
+                    selected_pose = candidate_pose
+                    selected_offset = candidate_offset
+                    targets = candidate_targets
+                    break
+                if planned is None or selected_pose is None or selected_offset is None:
+                    grasp_manifest["grasp_depth_auto_fallback"] = {
+                        "enabled": True,
+                        "requested_scale": float(args.grasp_depth_scale),
+                        "attempts": attempts,
+                        "selected_scale": None,
+                    }
+                    raise RuntimeError(
+                        "cuRobo planning failed for stage=grasp after depth fallback"
+                    )
+                update_grasp_manifest_pose(grasp_manifest, selected_pose, selected_offset)
+                grasp_manifest["grasp_depth_auto_fallback"] = {
+                    "enabled": True,
+                    "requested_scale": float(args.grasp_depth_scale),
+                    "attempts": attempts,
+                    "selected_scale": float(selected_offset["scale"]),
+                    "selected_offset_m": float(selected_offset["applied_distance_m"]),
+                }
+                manifest["stage_targets"] = {
+                    name: {
+                        "position_base": target["position"].tolist(),
+                        "quaternion_wxyz": target["quaternion"].tolist(),
+                    }
+                    for name, target in targets.items()
+                }
+                print(
+                    "grasp_depth_selected "
+                    f"scale={selected_offset['scale']:.3f} "
+                    f"offset={selected_offset['applied_distance_m']:.4f}"
+                )
+            else:
+                target = targets[stage_name]
+                planned = plan_stage(
+                    planner=planner,
+                    q_start=q_start,
+                    target_position=target["position"],
+                    target_quaternion=target["quaternion"],
+                    output_dir=output_dir,
+                    stage_name=stage_name,
+                    diagnostics_path=diagnostics_path,
+                )
             manifest["stages"].append(stage_manifest(planned))
+            q_start = ordered_values(
+                planned.trajectory_joint_names,
+                planned.trajectory_positions[-1],
+                planner.joint_names,
+            ).astype(np.float32)
+            if args.planning_only:
+                continue
+
             actions = make_pd_joint_pos_actions(
                 trajectory=planned.trajectory_positions,
                 trajectory_joint_names=planned.trajectory_joint_names,
@@ -379,12 +626,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                 action_repeat=args.action_repeat,
                 stop_on_success=args.fail_on_task_success,
             )
+            object_trace.append(object_lift_trace_sample(env, f"after_{stage_name}"))
             last_executed_actions = actions
-            q_start = ordered_values(
-                planned.trajectory_joint_names,
-                planned.trajectory_positions[-1],
-                planner.joint_names,
-            ).astype(np.float32)
             if stage_name == "grasp":
                 close_actions = repeat_last_action(actions, args.close_steps)
                 if len(close_actions) > 0:
@@ -396,6 +639,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                         action_repeat=1,
                         stop_on_success=args.fail_on_task_success,
                     )
+                    object_trace.append(object_lift_trace_sample(env, "after_gripper_close"))
                     last_executed_actions = close_actions
             if args.settle_steps > 0:
                 hold_actions = repeat_last_action(last_executed_actions, args.settle_steps)
@@ -406,17 +650,52 @@ def main(argv: Iterable[str] | None = None) -> int:
                     action_repeat=1,
                     stop_on_success=args.fail_on_task_success,
                 )
+                object_trace.append(object_lift_trace_sample(env, f"after_{stage_name}_settle"))
             if args.stop_after_stage == stage_name:
                 manifest["stopped_after_stage"] = stage_name
                 print(f"stopped_after_stage={stage_name}")
                 break
 
-        video_saved = recorder.save()
+        video_saved = recorder.save() if recorder is not None else None
+        manifest["object_lift_trace"] = object_trace
+        if args.planning_only:
+            manifest["planning_preflight_success"] = len(manifest["stages"]) == len(stages)
+            manifest["object_lift_metrics"] = None
+        else:
+            manifest["object_lift_metrics"] = compute_object_lift_metrics(object_trace)
         manifest["final_info"] = sanitize_for_json(final_info)
         manifest["video_saved"] = str(video_saved) if video_saved else None
         write_json(output_dir / "run_manifest.json", manifest)
         print(f"run_manifest={output_dir / 'run_manifest.json'}")
         print(f"video={video_saved}")
+    except Exception as exc:
+        manifest["exception"] = {
+            "type": type(exc).__name__,
+            "message": str(exc),
+        }
+        manifest["failure_reason"] = str(exc)
+        if args.planning_only:
+            manifest["planning_preflight_success"] = False
+        try:
+            if recorder is not None:
+                recorder.capture(env)
+        except Exception as capture_exc:
+            manifest["failure_capture_error"] = f"{type(capture_exc).__name__}: {capture_exc}"
+        try:
+            if object_trace:
+                object_trace.append(object_lift_trace_sample(env, "exception"))
+        except Exception as trace_exc:
+            manifest["failure_trace_error"] = f"{type(trace_exc).__name__}: {trace_exc}"
+        video_saved = recorder.save(allow_empty=True) if recorder is not None else None
+        manifest["object_lift_trace"] = object_trace
+        manifest["object_lift_metrics"] = compute_object_lift_metrics(object_trace) if object_trace else {}
+        manifest["final_info"] = sanitize_for_json(final_info)
+        manifest["video_saved"] = str(video_saved) if video_saved else None
+        manifest["partial_video_saved"] = bool(video_saved)
+        write_json(output_dir / "run_manifest.json", manifest)
+        print(f"partial_run_manifest={output_dir / 'run_manifest.json'}")
+        print(f"partial_video={video_saved}")
+        raise
     finally:
         env.close()
     return 0
@@ -454,6 +733,47 @@ def build_env(args: argparse.Namespace) -> Any:
     )
 
 
+def settle_environment(
+    env: Any,
+    *,
+    steps: int,
+    recorder: VideoRecorder | None = None,
+    gripper: float = 1.0,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Advance the simulator with a hold action so initially unstable objects can settle."""
+
+    obs: dict[str, Any] = {}
+    info: dict[str, Any] = {}
+    if steps <= 0:
+        return obs, info
+    action = hold_action(env, gripper=gripper)
+    for _ in range(int(steps)):
+        obs, _, _, _, info = env.step(action[None, :])
+        if recorder is not None:
+            recorder.capture(env)
+    return obs, info
+
+
+def hold_action(env: Any, *, gripper: float = 1.0) -> np.ndarray:
+    dim = int(np.prod(getattr(env.action_space, "shape", (0,))))
+    if dim <= 0:
+        raise ValueError("Cannot infer action dimension for settle hold action.")
+    action = np.zeros(dim, dtype=np.float32)
+    if dim >= 8:
+        try:
+            robot = env.unwrapped.agent.robot
+            active_joint_names = [joint.name for joint in robot.get_active_joints()]
+            qpos = first_vector(robot.get_qpos(), "robot qpos")
+            arm_names = [f"panda_joint{i}" for i in range(1, 8)]
+            action[:7] = ordered_values(active_joint_names, qpos, arm_names).astype(np.float32)
+            action[7] = float(gripper)
+        except Exception:
+            action[-1] = float(gripper)
+    elif dim >= 1:
+        action[-1] = float(gripper)
+    return action
+
+
 def save_current_zerograsp_input(
     obs: dict[str, Any],
     env: Any,
@@ -478,6 +798,7 @@ def save_current_zerograsp_input(
         "camera_eye": list(args.camera_eye),
         "camera_target": list(args.camera_target),
         "mask_mode": args.mask_mode,
+        "settle_before_export_steps": int(args.settle_before_export_steps),
         "n_objects": len(bundle.object_records),
         "objects": bundle.object_records,
     }
@@ -545,25 +866,23 @@ def load_control_pose(
     env: Any,
     args: argparse.Namespace,
     zerograsp_output_dir: Path | None,
-) -> tuple[ControlPose, dict[str, Any]]:
+) -> tuple[ControlPose, ControlPose, dict[str, Any]]:
     if args.target_base is not None:
         position = clamp_base_target(np.asarray(args.target_base, dtype=np.float64), args.workspace_z_min)
         quaternion = unit(np.asarray(args.target_quat_wxyz, dtype=np.float64).reshape(4))
         approach = unit(np.asarray(args.target_approach, dtype=np.float64).reshape(3))
-        return (
-            ControlPose(
-                position_base=position,
-                rotation_base_tool=rotation_matrix_from_quat_wxyz(quaternion),
-                quaternion_wxyz=quaternion,
-                approach_axis_base=approach,
-            ),
-            {
-                "source": "target-base-debug",
-                "position_base": position.tolist(),
-                "quaternion_wxyz": quaternion.tolist(),
-                "approach_axis_base": approach.tolist(),
-            },
+        control_pose = ControlPose(
+            position_base=position,
+            rotation_base_tool=rotation_matrix_from_quat_wxyz(quaternion),
+            quaternion_wxyz=quaternion,
+            approach_axis_base=approach,
         )
+        return control_pose, control_pose, {
+            "source": "target-base-debug",
+            "position_base": position.tolist(),
+            "quaternion_wxyz": quaternion.tolist(),
+            "approach_axis_base": approach.tolist(),
+        }
 
     if zerograsp_output_dir is None:
         raise ValueError("Provide --zerograsp-output or --target-base.")
@@ -571,7 +890,7 @@ def load_control_pose(
     grasp = load_best_grasp(zerograsp_output_dir)
     camera_model = camera_model_matrix(env, args.camera)
     world_from_base = robot_base_matrix(env)
-    control_pose = compute_grasp_control_pose(
+    zero_depth_control_pose = compute_grasp_control_pose(
         grasp=grasp,
         camera_model_matrix=camera_model,
         world_from_base_matrix=world_from_base,
@@ -581,8 +900,8 @@ def load_control_pose(
     hand_tcp_manifest = {"enabled": False}
     if args.use_hand_tcp_calibration:
         hand_to_tcp = hand_tcp_transform_in_hand_frame(env)
-        control_pose = apply_hand_tcp_calibration(
-            control_pose,
+        zero_depth_control_pose = apply_hand_tcp_calibration(
+            zero_depth_control_pose,
             hand_to_tcp_translation=hand_to_tcp[:3, 3],
             hand_to_tcp_rotation=hand_to_tcp[:3, :3],
             workspace_z_min=args.workspace_z_min,
@@ -594,10 +913,18 @@ def load_control_pose(
             "translation_hand_tcp": hand_to_tcp[:3, 3].tolist(),
             "rotation_hand_tcp": hand_to_tcp[:3, :3].tolist(),
         }
+    control_pose, depth_offset_manifest = apply_grasp_depth_offset(
+        zero_depth_control_pose,
+        depth_m=grasp.depth_m,
+        scale=args.grasp_depth_scale,
+        max_offset_m=args.grasp_depth_max_offset,
+        workspace_z_min=args.workspace_z_min,
+    )
     manifest = {
         "source": grasp.source,
         "score": grasp.score,
         "width_m": grasp.width_m,
+        "depth_m": grasp.depth_m,
         "object_index": grasp.object_index,
         "object_id": grasp.object_id,
         "translation_m_camera": grasp.translation_m_camera.tolist(),
@@ -605,9 +932,14 @@ def load_control_pose(
         "position_base": control_pose.position_base.tolist(),
         "quaternion_wxyz": control_pose.quaternion_wxyz.tolist(),
         "planner_position_base": planner_position_base(control_pose).tolist(),
+        "zero_depth_position_base": zero_depth_control_pose.position_base.tolist(),
+        "zero_depth_planner_position_base": planner_position_base(
+            zero_depth_control_pose
+        ).tolist(),
         "planner_quaternion_wxyz": planner_quaternion_wxyz(control_pose).tolist(),
         "approach_axis_base": control_pose.approach_axis_base.tolist(),
         "approach_axis_convention": args.approach_axis,
+        "grasp_depth_offset": depth_offset_manifest,
         "hand_tcp_calibration": hand_tcp_manifest,
         "camera_eye": list(args.camera_eye),
         "camera_target": list(args.camera_target),
@@ -617,7 +949,13 @@ def load_control_pose(
     print(f"target_panda_hand_base={np.round(planner_position_base(control_pose), 4).tolist()}")
     print(f"target_quat_wxyz={np.round(planner_quaternion_wxyz(control_pose), 4).tolist()}")
     print(f"approach_axis_base={np.round(control_pose.approach_axis_base, 4).tolist()}")
-    return control_pose, manifest
+    print(
+        "grasp_depth_offset "
+        f"depth={grasp.depth_m:.4f} scale={args.grasp_depth_scale:.3f} "
+        f"requested={depth_offset_manifest['requested_offset_m']:.4f} "
+        f"applied={depth_offset_manifest['applied_distance_m']:.4f}"
+    )
+    return control_pose, zero_depth_control_pose, manifest
 
 
 def prepare_curobo_scene_model(
@@ -794,6 +1132,7 @@ def plan_stage(
     output_dir: Path,
     stage_name: str,
     diagnostics_path: Path | None = None,
+    diagnostic_metadata: dict[str, Any] | None = None,
 ) -> PlannedStage:
     import torch
     from curobo.types import GoalToolPose, JointState
@@ -821,6 +1160,8 @@ def plan_stage(
         target_quaternion=target_quaternion,
         result=result,
     )
+    if diagnostic_metadata:
+        diagnostic.update(sanitize_for_json(diagnostic_metadata))
     if diagnostics_path is not None:
         append_planning_diagnostic(diagnostics_path, diagnostic)
     success = bool(diagnostic["success"])
@@ -859,7 +1200,7 @@ def plan_stage(
 def execute_action_waypoints(
     env: Any,
     actions: np.ndarray,
-    recorder: VideoRecorder,
+    recorder: VideoRecorder | None,
     action_repeat: int,
     stop_on_success: bool,
 ) -> dict[str, Any]:
@@ -868,13 +1209,120 @@ def execute_action_waypoints(
     for action in np.asarray(actions, dtype=np.float32):
         for _ in range(repeat):
             _, _, _, truncated, info = env.step(action[None, :])
-            recorder.capture(env)
+            if recorder is not None:
+                recorder.capture(env)
             final_info = info
             if as_bool(truncated):
                 return final_info
             if stop_on_success and info_success(info):
                 return final_info
     return final_info
+
+
+def object_lift_trace_sample(env: Any, label: str) -> dict[str, Any]:
+    target_pose = target_object_pose(env)
+    tcp_pose = tcp_pose_matrix(env)
+    sample: dict[str, Any] = {"label": label}
+    if target_pose is not None:
+        sample["object_position_world"] = target_pose[:3, 3].tolist()
+        sample["object_quat_wxyz"] = quat_wxyz_from_matrix(target_pose[:3, :3]).tolist()
+    if tcp_pose is not None:
+        sample["tcp_position_world"] = tcp_pose[:3, 3].tolist()
+    if target_pose is not None and tcp_pose is not None:
+        sample["object_tcp_distance_m"] = float(np.linalg.norm(target_pose[:3, 3] - tcp_pose[:3, 3]))
+    return sample
+
+
+def compute_object_lift_metrics(trace: list[dict[str, Any]]) -> dict[str, Any]:
+    positions = [
+        np.asarray(sample["object_position_world"], dtype=np.float64).reshape(3)
+        for sample in trace
+        if "object_position_world" in sample
+    ]
+    if not positions:
+        return {
+            "object_lift_success": False,
+            "failure_reason": "target_object_pose_missing",
+        }
+
+    initial = positions[0]
+    final = positions[-1]
+    heights = np.asarray([position[2] for position in positions], dtype=np.float64)
+    distances = [
+        float(sample["object_tcp_distance_m"])
+        for sample in trace
+        if "object_tcp_distance_m" in sample
+    ]
+    final_distance = distances[-1] if distances else None
+    height_delta = float(final[2] - initial[2])
+    max_height_delta = float(heights.max() - initial[2])
+    min_required_lift = 0.03
+    max_final_tcp_distance = 0.16
+    distance_ok = final_distance is None or final_distance <= max_final_tcp_distance
+    object_lift_success = bool(height_delta >= min_required_lift and distance_ok)
+    return {
+        "object_lift_success": object_lift_success,
+        "initial_object_position_world": initial.tolist(),
+        "final_object_position_world": final.tolist(),
+        "height_delta_m": height_delta,
+        "max_height_delta_m": max_height_delta,
+        "final_object_tcp_distance_m": final_distance,
+        "min_required_lift_m": min_required_lift,
+        "max_final_tcp_distance_m": max_final_tcp_distance,
+        "failure_reason": "" if object_lift_success else "object_not_lifted",
+    }
+
+
+def target_object_pose(env: Any) -> np.ndarray | None:
+    root = getattr(env, "unwrapped", env)
+    for source_name in ("target_object", "obj", "_objs"):
+        for actor in iter_actor_like(getattr(root, source_name, None)):
+            pose = getattr(actor, "pose", None)
+            if pose is None:
+                get_pose = getattr(actor, "get_pose", None)
+                pose = get_pose() if callable(get_pose) else None
+            if pose is None:
+                continue
+            try:
+                return pose_to_matrix(pose, f"{source_name}.pose")
+            except Exception:
+                continue
+    return None
+
+
+def tcp_pose_matrix(env: Any) -> np.ndarray | None:
+    agent = env.unwrapped.agent
+    tcp = getattr(agent, "tcp", None)
+    if tcp is not None and getattr(tcp, "pose", None) is not None:
+        try:
+            return pose_to_matrix(tcp.pose, "agent.tcp.pose")
+        except Exception:
+            pass
+    robot = getattr(agent, "robot", None)
+    if robot is None:
+        return None
+    for link_name in ("panda_hand_tcp", "panda_hand", "tcp"):
+        link = find_robot_link(robot, link_name)
+        if link is not None and getattr(link, "pose", None) is not None:
+            try:
+                return pose_to_matrix(link.pose, f"{link_name}.pose")
+            except Exception:
+                continue
+    return None
+
+
+def iter_actor_like(value: Any):
+    if value is None:
+        return
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from iter_actor_like(item)
+        return
+    if isinstance(value, (list, tuple, set)):
+        for item in value:
+            yield from iter_actor_like(item)
+        return
+    yield value
 
 
 def repeat_last_action(actions: np.ndarray, steps: int) -> np.ndarray:
@@ -886,11 +1334,24 @@ def repeat_last_action(actions: np.ndarray, steps: int) -> np.ndarray:
     return np.repeat(arr[-1:, :], int(steps), axis=0)
 
 
-def build_stage_targets(control_pose: ControlPose, motion: MotionConfig) -> dict[str, dict[str, np.ndarray]]:
+def build_stage_targets(
+    control_pose: ControlPose,
+    motion: MotionConfig,
+    *,
+    pregrasp_control_pose: ControlPose | None = None,
+) -> dict[str, dict[str, np.ndarray]]:
     target = clamp_base_target(planner_position_base(control_pose), z_min=motion.workspace_z_min)
     quaternion = planner_quaternion_wxyz(control_pose)
     approach = unit(control_pose.approach_axis_base)
-    pre = clamp_base_target(target - approach * motion.pregrasp_offset_m, z_min=motion.workspace_z_min)
+    pregrasp_pose = pregrasp_control_pose or control_pose
+    pregrasp_anchor = clamp_base_target(
+        planner_position_base(pregrasp_pose),
+        z_min=motion.workspace_z_min,
+    )
+    pre = clamp_base_target(
+        pregrasp_anchor - approach * motion.pregrasp_offset_m,
+        z_min=motion.workspace_z_min,
+    )
     lift = clamp_base_target(target + np.array([0.0, 0.0, motion.lift_offset_m]), z_min=motion.workspace_z_min)
     return {
         "pre": {"position": pre, "quaternion": quaternion},
@@ -975,20 +1436,31 @@ def build_control_pose_marker_geometry(
     )
 
 
-def add_grasp_marker_to_scene(scene: Any, geometry: GraspMarkerGeometry) -> list[Any]:
-    """Draw a green center sphere, red approach arrow, and blue gripper-width bar."""
+def add_grasp_marker_to_scene(
+    scene: Any,
+    geometry: GraspMarkerGeometry,
+    *,
+    name_prefix: str = "zerograsp_marker",
+    center_color: list[float] | None = None,
+    approach_color: list[float] | None = None,
+    width_color: list[float] | None = None,
+) -> list[Any]:
+    """Draw a center sphere, approach arrow, and gripper-width bar."""
 
     import sapien
 
+    center_rgba = [0.0, 1.0, 0.0, 0.85] if center_color is None else center_color
+    approach_rgba = [1.0, 0.0, 0.0, 0.85] if approach_color is None else approach_color
+    width_rgba = [0.0, 0.25, 1.0, 0.85] if width_color is None else width_color
     actors = []
     sphere_builder = scene.create_actor_builder()
     sphere_builder.add_sphere_visual(
         pose=sapien.Pose(p=[0.0, 0.0, 0.0]),
         radius=0.018,
-        material=sapien.render.RenderMaterial(base_color=[0.0, 1.0, 0.0, 0.85]),
+        material=sapien.render.RenderMaterial(base_color=center_rgba),
     )
     sphere_builder.set_initial_pose(sapien.Pose(p=geometry.center_world.tolist()))
-    actors.append(sphere_builder.build_kinematic(name="zerograsp_marker_center"))
+    actors.append(sphere_builder.build_kinematic(name=f"{name_prefix}_center"))
 
     actors.append(
         add_marker_bar_actor(
@@ -996,8 +1468,8 @@ def add_grasp_marker_to_scene(scene: Any, geometry: GraspMarkerGeometry) -> list
             start=geometry.center_world,
             end=geometry.approach_end_world,
             thickness=0.006,
-            color=[1.0, 0.0, 0.0, 0.85],
-            name="zerograsp_marker_approach",
+            color=approach_rgba,
+            name=f"{name_prefix}_approach",
         )
     )
     actors.append(
@@ -1006,8 +1478,8 @@ def add_grasp_marker_to_scene(scene: Any, geometry: GraspMarkerGeometry) -> list
             start=geometry.width_endpoints_world[0],
             end=geometry.width_endpoints_world[1],
             thickness=0.005,
-            color=[0.0, 0.25, 1.0, 0.85],
-            name="zerograsp_marker_width",
+            color=width_rgba,
+            name=f"{name_prefix}_width",
         )
     )
 
@@ -1015,10 +1487,10 @@ def add_grasp_marker_to_scene(scene: Any, geometry: GraspMarkerGeometry) -> list
     tip_builder.add_sphere_visual(
         pose=sapien.Pose(p=[0.0, 0.0, 0.0]),
         radius=0.012,
-        material=sapien.render.RenderMaterial(base_color=[1.0, 0.0, 0.0, 0.9]),
+        material=sapien.render.RenderMaterial(base_color=approach_rgba),
     )
     tip_builder.set_initial_pose(sapien.Pose(p=geometry.approach_end_world.tolist()))
-    actors.append(tip_builder.build_kinematic(name="zerograsp_marker_approach_tip"))
+    actors.append(tip_builder.build_kinematic(name=f"{name_prefix}_approach_tip"))
     return actors
 
 
@@ -1153,6 +1625,95 @@ def compute_grasp_control_pose(
         quaternion_wxyz=quaternion,
         approach_axis_base=unit(rotation_base_tool[:, 2]),
     )
+
+
+def apply_grasp_depth_offset(
+    control_pose: ControlPose,
+    *,
+    depth_m: float,
+    scale: float,
+    max_offset_m: float,
+    workspace_z_min: float,
+) -> tuple[ControlPose, dict[str, Any]]:
+    """Move the TCP target into the grasp along the predicted approach depth."""
+
+    depth = max(0.0, float(depth_m))
+    depth_scale = float(scale)
+    max_offset = float(max_offset_m)
+    if depth_scale < 0.0:
+        raise ValueError("--grasp-depth-scale must be non-negative.")
+    if max_offset < 0.0:
+        raise ValueError("--grasp-depth-max-offset must be non-negative.")
+
+    original_position = np.asarray(control_pose.position_base, dtype=np.float64).reshape(3)
+    requested_offset = min(depth * depth_scale, max_offset)
+    requested_vector = unit(control_pose.approach_axis_base) * requested_offset
+    adjusted_position = clamp_base_target(
+        original_position + requested_vector,
+        z_min=workspace_z_min,
+    )
+    applied_vector = adjusted_position - original_position
+
+    planner_position = control_pose.planner_position_base
+    if planner_position is not None:
+        planner_position = np.asarray(planner_position, dtype=np.float64).reshape(3) + applied_vector
+
+    adjusted_pose = ControlPose(
+        position_base=adjusted_position,
+        rotation_base_tool=control_pose.rotation_base_tool,
+        quaternion_wxyz=control_pose.quaternion_wxyz,
+        approach_axis_base=control_pose.approach_axis_base,
+        planner_position_base=planner_position,
+        planner_rotation_base_tool=control_pose.planner_rotation_base_tool,
+        planner_quaternion_wxyz=control_pose.planner_quaternion_wxyz,
+    )
+    manifest = {
+        "enabled": bool(depth_scale > 0.0 and requested_offset > 0.0),
+        "depth_m": depth,
+        "scale": depth_scale,
+        "max_offset_m": max_offset,
+        "position_base_before": original_position.tolist(),
+        "requested_offset_m": requested_offset,
+        "requested_vector_base": requested_vector.tolist(),
+        "position_base_after": adjusted_position.tolist(),
+        "applied_vector_base": applied_vector.tolist(),
+        "applied_distance_m": float(np.linalg.norm(applied_vector)),
+        "workspace_clamped": not np.allclose(applied_vector, requested_vector, atol=1e-9),
+    }
+    return adjusted_pose, manifest
+
+
+def grasp_depth_attempt_scales(
+    requested_scale: float,
+    fallback_fractions: Iterable[float],
+) -> list[float]:
+    requested = float(requested_scale)
+    if requested < 0.0:
+        raise ValueError("--grasp-depth-scale must be non-negative.")
+    scales = [requested]
+    for fraction in fallback_fractions:
+        value = float(fraction)
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(
+                "--grasp-depth-fallback-fractions values must be within [0, 1]."
+            )
+        candidate = requested * value
+        if not any(abs(candidate - existing) < 1e-9 for existing in scales):
+            scales.append(candidate)
+    return scales
+
+
+def update_grasp_manifest_pose(
+    manifest: dict[str, Any],
+    control_pose: ControlPose,
+    depth_offset_manifest: dict[str, Any],
+) -> None:
+    manifest["position_base"] = control_pose.position_base.tolist()
+    manifest["quaternion_wxyz"] = control_pose.quaternion_wxyz.tolist()
+    manifest["planner_position_base"] = planner_position_base(control_pose).tolist()
+    manifest["planner_quaternion_wxyz"] = planner_quaternion_wxyz(control_pose).tolist()
+    manifest["approach_axis_base"] = control_pose.approach_axis_base.tolist()
+    manifest["grasp_depth_offset"] = depth_offset_manifest
 
 
 def opencv_camera_to_base(

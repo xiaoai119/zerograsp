@@ -278,6 +278,10 @@ class ZeroGrasp(pl.LightningModule):
         data = input_feature(octree)
         return data
 
+    def get_grasp_target_mask(self, octree):
+        input_feature = ocnn.modules.InputFeature("F", nempty=True)
+        return input_feature(octree)
+
     def _make_predict_module(self, channel_in, channel_out=2, num_hidden=64):
         return th.nn.Sequential(
             Conv1x1BnElu(channel_in, num_hidden),
@@ -370,8 +374,28 @@ class ZeroGrasp(pl.LightningModule):
         z = mu + eps * th.sqrt(var)
         return z
 
+    def latent_value(self, mu, var):
+        """Sample during training or explicit sampling mode; use the mean in eval."""
+        if self.training or self.mode_sample:
+            return self.rsample(mu, var)
+        return mu
+
     def process_batch(self, batch, rgb_feat):
-        _, masks, depth, pts_3d_in_list, pts_3d_gt_list, K, z_min, frame_idx = batch
+        if len(batch) == 9:
+            (
+                _,
+                masks,
+                depth,
+                pts_3d_in_list,
+                pts_3d_gt_list,
+                pts_3d_gt_grasp_mask_list,
+                K,
+                z_min,
+                frame_idx,
+            ) = batch
+        else:
+            _, masks, depth, pts_3d_in_list, pts_3d_gt_list, K, z_min, frame_idx = batch
+            pts_3d_gt_grasp_mask_list = None
         masks = th.cat([mask[0] for mask in masks], dim=0)
 
         B = depth.shape[0]
@@ -382,6 +406,7 @@ class ZeroGrasp(pl.LightningModule):
         octrees_in_scene_nnum = [0] * B
         octrees_mid = []
         octrees_out = []
+        octrees_grasp_target_mask = []
         octrees_z_min = []
         num_objs = []
 
@@ -433,6 +458,19 @@ class ZeroGrasp(pl.LightningModule):
                     octree_out.build_octree(masked_pts_3d_gt)
                     octrees_out.append(octree_out)
 
+                    if pts_3d_gt_grasp_mask_list is not None:
+                        pts_3d_gt_grasp_mask = pts_3d_gt_grasp_mask_list[i]
+                        masked_pts_3d_gt_grasp_mask = pts_3d_gt_grasp_mask.__getitem__(
+                            mask_out
+                        )
+                        octree_grasp_target_mask = Octree(
+                            max_lod, min_lod, device=pts_3d_in.device
+                        )
+                        octree_grasp_target_mask.build_octree(
+                            masked_pts_3d_gt_grasp_mask
+                        )
+                        octrees_grasp_target_mask.append(octree_grasp_target_mask)
+
                 octrees_z_min.append(z_min[i].clone())
 
         octrees_in = ocnn.octree.merge_octrees(octrees_in)
@@ -448,6 +486,12 @@ class ZeroGrasp(pl.LightningModule):
         else:
             octrees_out = ocnn.octree.merge_octrees(octrees_out)
             octrees_out.construct_all_neigh()
+
+        if pts_3d_gt_grasp_mask_list is not None:
+            octrees_grasp_target_mask = ocnn.octree.merge_octrees(
+                octrees_grasp_target_mask
+            )
+            octrees_grasp_target_mask.construct_all_neigh()
 
         num_objs = th.tensor(num_objs, device=pts_3d_in.device, dtype=th.int32)
         scene_obj_end = th.cumsum(num_objs, dim=0)
@@ -468,6 +512,8 @@ class ZeroGrasp(pl.LightningModule):
             "object_batch_start": object_batch_start,
             "object_batch_end": object_batch_end,
         }
+        if pts_3d_gt_grasp_mask_list is not None:
+            batch["octrees_grasp_target_mask"] = octrees_grasp_target_mask
 
         return batch
 
@@ -482,6 +528,7 @@ class ZeroGrasp(pl.LightningModule):
         # octrees_scene_in = batch['octrees_scene_in']
         octrees_in_scene_nnum = batch["octrees_in_scene_nnum"]
         octrees_out = batch["octrees_out"]
+        octrees_grasp_target_mask = batch.get("octrees_grasp_target_mask")
 
         octrees_z_min = batch["octrees_z_min"]
         K = batch["K"][0]  # INFO(sh8): assuming that K is consistent over a batch
@@ -528,8 +575,7 @@ class ZeroGrasp(pl.LightningModule):
             pv = th.exp(lpv)
 
             if self.update_octree:
-                z = self.rsample(pm, pv)
-                # z = pm
+                z = self.latent_value(pm, pv)
             else:
                 posterior_out = self.posterior_encoder(
                     octrees_out, self.min_lod, self.max_lod
@@ -579,7 +625,7 @@ class ZeroGrasp(pl.LightningModule):
                 qm = posterior_out[:, : self.channel_latent]
                 lqv = posterior_out[:, self.channel_latent :]
                 qv = th.exp(lqv)
-                z = self.rsample(qm, qv)
+                z = self.latent_value(qm, qv)
                 data["qm"] = qm
                 data["qv"] = qv
                 data["pm"] = pm
@@ -626,6 +672,15 @@ class ZeroGrasp(pl.LightningModule):
             octrees_out.features[self.max_lod] = data["signal"][:, 3:]
         else:
             data["gt_signal"] = self.get_ground_truth_signal(octrees_out)
+            if octrees_grasp_target_mask is not None:
+                grasp_target_mask = self.get_grasp_target_mask(octrees_grasp_target_mask)
+                data["grasp_target_mask"], _ = octree_align(
+                    grasp_target_mask,
+                    octrees_grasp_target_mask,
+                    octrees_out,
+                    self.max_lod,
+                    nempty=True,
+                )
         data["octrees_out"] = octrees_out
 
         return data

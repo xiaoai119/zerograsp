@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import random
 from typing import Any, Iterable
 
 import numpy as np
@@ -25,11 +27,36 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config", default="configs/maniskill.yaml", help="ZeroGrasp config path.")
     parser.add_argument("--device", default=None, help="Optional torch device.")
     parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=0,
+        help="Seed NumPy and PyTorch before model construction and inference.",
+    )
+    parser.add_argument(
         "--enable-collision-detection",
         action="store_true",
         help="Enable ZeroGrasp collision filtering.",
     )
     return parser.parse_args(argv)
+
+
+def seed_inference(random_seed: int) -> None:
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    import torch
+
+    torch.manual_seed(random_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(random_seed)
+    torch.use_deterministic_algorithms(True)
+    if torch.backends.cudnn.is_available():
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.allow_tf32 = False
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = False
 
 
 def grasp_prediction_to_json(grasp: Any, source_file: str | None = None) -> dict[str, Any]:
@@ -98,6 +125,7 @@ def save_zerograsp_result(result: Any, output_dir: str | Path) -> dict[str, Any]
 
 def main(argv: Iterable[str] | None = None) -> int:
     args = parse_args(argv)
+    seed_inference(args.random_seed)
     from zerograsp.pipeline import ZeroGraspPipeline
 
     pipeline = ZeroGraspPipeline(
@@ -113,6 +141,12 @@ def main(argv: Iterable[str] | None = None) -> int:
         camera_path=str(Path(args.camera_info_path).expanduser().resolve()),
     )
     report = save_zerograsp_result(result, args.output_dir)
+    report["use_collision_detection"] = bool(args.enable_collision_detection)
+    report["random_seed"] = int(args.random_seed)
+    (Path(args.output_dir).expanduser().resolve() / "run_report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     if report["recommended_grasp"] is None:
         return 2

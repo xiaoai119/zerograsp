@@ -24,6 +24,7 @@ class PipelineLayout:
     logs_dir: Path
     projection_path: Path
     video_path: Path
+    rl_tuning_path: Path
     manifest_path: Path
 
 
@@ -82,6 +83,69 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--lift-offset", type=float, default=0.15, help="Meters to lift after closing.")
     parser.add_argument("--video-fps", type=int, default=20, help="Execution video FPS.")
     parser.add_argument(
+        "--rl-tune",
+        action="store_true",
+        help="Run residual CEM policy search before final ManiSkill execution.",
+    )
+    parser.add_argument("--rl-iters", type=int, default=3, help="CEM iterations for --rl-tune.")
+    parser.add_argument("--rl-population", type=int, default=8, help="Rollouts per CEM iteration for --rl-tune.")
+    parser.add_argument("--rl-elite-fraction", type=float, default=0.25, help="Elite fraction used by CEM.")
+    parser.add_argument("--rl-seed", type=int, default=None, help="Random seed for residual policy search.")
+    parser.add_argument(
+        "--rl-stop-on-success",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Stop residual policy search after the first successful rollout.",
+    )
+    parser.add_argument(
+        "--rl-approach-offset-range",
+        type=float,
+        nargs=2,
+        default=(0.0, 0.05),
+        metavar=("MIN", "MAX"),
+        help="Meters to search along the grasp approach direction.",
+    )
+    parser.add_argument(
+        "--rl-tcp-x-offset-range",
+        type=float,
+        nargs=2,
+        default=(-0.02, 0.02),
+        metavar=("MIN", "MAX"),
+        help="Meters to search along the TCP local x axis.",
+    )
+    parser.add_argument(
+        "--rl-tcp-y-offset-range",
+        type=float,
+        nargs=2,
+        default=(-0.02, 0.02),
+        metavar=("MIN", "MAX"),
+        help="Meters to search along the TCP local y/gripper-width axis.",
+    )
+    parser.add_argument(
+        "--rl-roll-delta-range",
+        type=float,
+        nargs=2,
+        default=(-0.35, 0.35),
+        metavar=("MIN", "MAX"),
+        help="Radians to search around the TCP local approach axis.",
+    )
+    parser.add_argument(
+        "--rl-gripper-open-range",
+        type=float,
+        nargs=2,
+        default=(0.5, 1.0),
+        metavar=("MIN", "MAX"),
+        help="Normalized ManiSkill gripper command range for open stages.",
+    )
+    parser.add_argument(
+        "--rl-gripper-closed-range",
+        type=float,
+        nargs=2,
+        default=(-1.0, -0.2),
+        metavar=("MIN", "MAX"),
+        help="Normalized ManiSkill gripper command range for close/lift stages.",
+    )
+    parser.add_argument(
         "--checkpoint",
         default="checkpoints/zerograsp_cvpr2025/zerograsp_demo.ckpt",
         help="ZeroGrasp checkpoint path.",
@@ -112,6 +176,7 @@ def prepare_run_layout(output_root: str | Path, run_name: str | None = None) -> 
         logs_dir=run_dir / "logs",
         projection_path=run_dir / "grasp_projection.png",
         video_path=run_dir / "execution.mp4",
+        rl_tuning_path=run_dir / "rl_tuning.json",
         manifest_path=run_dir / "run_manifest.json",
     )
     layout.input_dir.mkdir(parents=True, exist_ok=True)
@@ -244,6 +309,36 @@ def build_pipeline_steps(args: argparse.Namespace, layout: PipelineLayout) -> li
         execute_args.append("--show-grasp-marker")
     if args.position_only:
         execute_args.append("--position-only")
+    if args.rl_tune:
+        execute_args.extend(
+            [
+                "--rl-tune",
+                "--rl-iters",
+                str(args.rl_iters),
+                "--rl-population",
+                str(args.rl_population),
+                "--rl-elite-fraction",
+                str(args.rl_elite_fraction),
+                "--rl-output",
+                str(layout.rl_tuning_path),
+                "--rl-approach-offset-range",
+                *[str(float(v)) for v in args.rl_approach_offset_range],
+                "--rl-tcp-x-offset-range",
+                *[str(float(v)) for v in args.rl_tcp_x_offset_range],
+                "--rl-tcp-y-offset-range",
+                *[str(float(v)) for v in args.rl_tcp_y_offset_range],
+                "--rl-roll-delta-range",
+                *[str(float(v)) for v in args.rl_roll_delta_range],
+                "--rl-gripper-open-range",
+                *[str(float(v)) for v in args.rl_gripper_open_range],
+                "--rl-gripper-closed-range",
+                *[str(float(v)) for v in args.rl_gripper_closed_range],
+            ]
+        )
+        if args.rl_seed is not None:
+            execute_args.extend(["--rl-seed", str(args.rl_seed)])
+        if not args.rl_stop_on_success:
+            execute_args.append("--no-rl-stop-on-success")
     steps.append(
         PipelineStep(
             name="execute",
@@ -332,6 +427,8 @@ def write_manifest(layout: PipelineLayout, args: argparse.Namespace, steps: list
         "recommended_grasp": str(layout.output_dir / "recommended_grasp_top1.json"),
         "projection": str(layout.projection_path),
         "video": str(layout.video_path),
+        "rl_tuning": str(layout.rl_tuning_path),
+        "rl_tune": bool(args.rl_tune),
         "steps": steps,
     }
     layout.manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -357,6 +454,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     print(f"Recommended grasp: {layout.output_dir / 'recommended_grasp_top1.json'}")
     print(f"Projection: {layout.projection_path}")
     print(f"Video: {layout.video_path}")
+    if args.rl_tune:
+        print(f"RL tuning: {layout.rl_tuning_path}")
     return 0
 
 

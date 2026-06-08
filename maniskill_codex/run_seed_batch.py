@@ -58,6 +58,23 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pregrasp-offset", type=float, default=0.10, help="Meters to retreat from grasp along approach.")
     parser.add_argument("--lift-offset", type=float, default=0.15, help="Meters to lift after closing.")
     parser.add_argument("--video-fps", type=int, default=20, help="Execution video FPS.")
+    parser.add_argument("--rl-tune", action="store_true", help="Enable residual RL/CEM tuning in each seed run.")
+    parser.add_argument("--rl-iters", type=int, default=3, help="CEM iterations for --rl-tune.")
+    parser.add_argument("--rl-population", type=int, default=8, help="Rollouts per CEM iteration for --rl-tune.")
+    parser.add_argument("--rl-elite-fraction", type=float, default=0.25, help="Elite fraction used by CEM.")
+    parser.add_argument("--rl-seed", type=int, default=None, help="Random seed for residual policy search.")
+    parser.add_argument(
+        "--rl-stop-on-success",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Stop residual policy search after the first successful rollout.",
+    )
+    parser.add_argument("--rl-approach-offset-range", type=float, nargs=2, default=(0.0, 0.05))
+    parser.add_argument("--rl-tcp-x-offset-range", type=float, nargs=2, default=(-0.02, 0.02))
+    parser.add_argument("--rl-tcp-y-offset-range", type=float, nargs=2, default=(-0.02, 0.02))
+    parser.add_argument("--rl-roll-delta-range", type=float, nargs=2, default=(-0.35, 0.35))
+    parser.add_argument("--rl-gripper-open-range", type=float, nargs=2, default=(0.5, 1.0))
+    parser.add_argument("--rl-gripper-closed-range", type=float, nargs=2, default=(-1.0, -0.2))
     parser.add_argument(
         "--mask-mode",
         choices=("task-target", "all-objects", "visible-area"),
@@ -171,6 +188,34 @@ def build_pipeline_command(args: argparse.Namespace, seed: int, run_name: str) -
         command.append("--no-grasp-marker")
     if args.position_only:
         command.append("--position-only")
+    if args.rl_tune:
+        command.extend(
+            [
+                "--rl-tune",
+                "--rl-iters",
+                str(args.rl_iters),
+                "--rl-population",
+                str(args.rl_population),
+                "--rl-elite-fraction",
+                str(args.rl_elite_fraction),
+                "--rl-approach-offset-range",
+                *[str(float(v)) for v in args.rl_approach_offset_range],
+                "--rl-tcp-x-offset-range",
+                *[str(float(v)) for v in args.rl_tcp_x_offset_range],
+                "--rl-tcp-y-offset-range",
+                *[str(float(v)) for v in args.rl_tcp_y_offset_range],
+                "--rl-roll-delta-range",
+                *[str(float(v)) for v in args.rl_roll_delta_range],
+                "--rl-gripper-open-range",
+                *[str(float(v)) for v in args.rl_gripper_open_range],
+                "--rl-gripper-closed-range",
+                *[str(float(v)) for v in args.rl_gripper_closed_range],
+            ]
+        )
+        if args.rl_seed is not None:
+            command.extend(["--rl-seed", str(args.rl_seed)])
+        if not args.rl_stop_on_success:
+            command.append("--no-rl-stop-on-success")
     if args.no_conda:
         command.append("--no-conda")
     return command

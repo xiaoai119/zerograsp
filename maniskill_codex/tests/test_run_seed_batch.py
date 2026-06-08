@@ -72,6 +72,31 @@ class SeedBatchTests(unittest.TestCase):
         self.assertIn("0.02", command)
         self.assertIn("--no-conda", command)
 
+    def test_build_pipeline_command_forwards_rl_tuning(self):
+        args = parse_args(
+            [
+                "--seed-range",
+                "5",
+                "--output-root",
+                "/tmp/batch",
+                "--rl-tune",
+                "--rl-iters",
+                "2",
+                "--rl-population",
+                "4",
+                "--no-rl-stop-on-success",
+            ]
+        )
+
+        command = build_pipeline_command(args, seed=5, run_name="check_seed5")
+
+        self.assertIn("--rl-tune", command)
+        self.assertIn("--rl-iters", command)
+        self.assertIn("2", command)
+        self.assertIn("--rl-population", command)
+        self.assertIn("4", command)
+        self.assertIn("--no-rl-stop-on-success", command)
+
     def test_collect_run_record_and_write_summary_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp) / "seed1"

@@ -70,12 +70,37 @@ def make_sample_wrapper(
         obj_info = sample["gt_info.json"]
         mask_rle = sample["mask_visib.json"]
         K = np.asarray(sample["camera.json"]["cam_K"]).astype(np.float32).reshape(3, 3)
+        if getattr(config, "use_sample_camera_rays", False):
+            current_camera_rays = get_camera_rays(K, img_size)
+        else:
+            current_camera_rays = camera_rays
         spc = numpy_to_torch(sample["spc.npz"]["spc"].astype(np.float32))
         obj_ids = numpy_to_torch(sample["spc.npz"]["obj_ids"].astype(np.int32))
         if not is_eval:
             grasp_poses = numpy_to_torch(
                 sample["grasp.npz"]["grasp_poses"].astype(np.float32)
             )
+            use_sparse_grasp_mask = getattr(config, "use_sparse_grasp_mask", False)
+            if use_sparse_grasp_mask and "grasp_mask.npz" in sample:
+                grasp_target_mask = sample["grasp_mask.npz"]
+                if "target_mask_10d" in grasp_target_mask:
+                    grasp_target_mask = grasp_target_mask["target_mask_10d"]
+                elif "grasp_mask" in grasp_target_mask:
+                    grasp_target_mask = grasp_target_mask["grasp_mask"]
+                else:
+                    raise KeyError(
+                        "grasp_mask.npz must contain target_mask_10d or grasp_mask"
+                    )
+                grasp_target_mask = numpy_to_torch(
+                    grasp_target_mask.astype(np.float32)
+                )
+            elif use_sparse_grasp_mask:
+                dense_valid = (grasp_poses[:, 0:1] > 0.1).float()
+                grasp_target_mask = th.cat(
+                    [th.ones_like(dense_valid), dense_valid.repeat(1, 9)], dim=-1
+                )
+            else:
+                grasp_target_mask = None
 
         masks = []
         dilated_masks = []
@@ -83,7 +108,7 @@ def make_sample_wrapper(
         visible_labels = []
 
         rays_pts_3d = numpy_to_torch(
-            (camera_rays * depth[:, :, None]).astype(np.float32)
+            (current_camera_rays * depth[:, :, None]).astype(np.float32)
         )
 
         filtered_idxs = []
@@ -176,6 +201,16 @@ def make_sample_wrapper(
                 grasp_poses = th.cat(
                     [grasp_poses, th.zeros(grasp_poses.shape[0], 1)], dim=-1
                 )
+            if grasp_target_mask is not None:
+                grasp_target_mask = grasp_target_mask[spc_mask]
+                if grasp_target_mask.shape[1] == 9:
+                    grasp_target_mask = th.cat(
+                        [
+                            grasp_target_mask,
+                            th.zeros(grasp_target_mask.shape[0], 1),
+                        ],
+                        dim=-1,
+                    )
             features = th.cat([spc[:, 3:4], grasp_poses], dim=-1)
             features = th.nan_to_num(features, posinf=0.0, neginf=0.0)
 
@@ -189,6 +224,13 @@ def make_sample_wrapper(
             features=features,
             labels=obj_ids,
         )
+        pts_3d_gt_grasp_mask = None
+        if (not is_eval) and grasp_target_mask is not None:
+            pts_3d_gt_grasp_mask = Points(
+                points=pts_3d_gt.points.clone(),
+                features=th.nan_to_num(grasp_target_mask, posinf=0.0, neginf=0.0),
+                labels=obj_ids.clone(),
+            )
 
         if config.use_aug and (not is_eval):
             tangential = pts_3d_gt.features[:, 3:6]
@@ -199,11 +241,15 @@ def make_sample_wrapper(
                 if flag:
                     pts_3d_in.flip(axis)
                     pts_3d_gt.flip(axis)
+                    if pts_3d_gt_grasp_mask is not None:
+                        pts_3d_gt_grasp_mask.flip(axis)
                     tangential[:, axis_map[axis]] = -tangential[:, axis_map[axis]]
                     normal[:, axis_map[axis]] = -normal[:, axis_map[axis]]
             angle = th.tensor([0.0, 0.0, (random.random() * np.pi / 3) - np.pi / 6])
             pts_3d_in.rotate(angle)
             pts_3d_gt.rotate(angle)
+            if pts_3d_gt_grasp_mask is not None:
+                pts_3d_gt_grasp_mask.rotate(angle)
             cos, sin = angle.cos(), angle.sin()
             rotz = th.Tensor([[cos[2], sin[2], 0], [-sin[2], cos[2], 0], [0, 0, 1]])
             tangential = tangential @ rotz
@@ -216,13 +262,28 @@ def make_sample_wrapper(
             raise Exception("This item does not have enough points", frame_idx)
 
         pts_3d_in.clip()
-        pts_3d_gt.clip()
+        pts_3d_gt_clip_mask = pts_3d_gt.clip()
+        if pts_3d_gt_grasp_mask is not None:
+            pts_3d_gt_grasp_mask.copy_from(pts_3d_gt_grasp_mask[pts_3d_gt_clip_mask])
 
         # unique_labels = th.unique(pts_3d_in.labels)
         # filtered_idxs = np.array(filtered_idxs)
         # if not np.array_equal(unique_labels.numpy(), filtered_idxs):
         #     print(unique_labels.numpy(), filtered_idxs)
         #     raise Exception('The number of input labels is different from the number of masks')
+
+        if pts_3d_gt_grasp_mask is not None:
+            return (
+                rgb,
+                masks,
+                depth,
+                pts_3d_in,
+                pts_3d_gt,
+                pts_3d_gt_grasp_mask,
+                K,
+                z_min,
+                sample["__key__"],
+            )
 
         return (rgb, masks, depth, pts_3d_in, pts_3d_gt, K, z_min, sample["__key__"])
 

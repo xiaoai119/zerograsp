@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -20,6 +21,15 @@ from maniskill_codex.grasp_markers import (
     add_grasp_marker_to_scene,
     build_grasp_marker_geometry,
     opencv_grasp_rotation_to_world_axes,
+)
+from maniskill_codex.grasp_rl_tuning import (
+    RLRolloutEvaluation,
+    RLTuningConfig,
+    ResidualActionBounds,
+    ResidualGraspAction,
+    apply_residual_to_pose,
+    reward_from_rollout_result,
+    tune_residual_policy,
 )
 from maniskill_codex.transforms import opencv_camera_to_base
 from maniskill_codex.zerograsp_inputs import (
@@ -156,6 +166,77 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
             "flip-world-z keeps XY and flips only the world/base Z component."
         ),
     )
+    parser.add_argument(
+        "--rl-tune",
+        action="store_true",
+        help=(
+            "Tune a small residual grasp policy before the final execution. "
+            "This searches pose offsets and gripper open/close commands with ManiSkill rollouts."
+        ),
+    )
+    parser.add_argument("--rl-iters", type=int, default=3, help="CEM iterations for --rl-tune.")
+    parser.add_argument("--rl-population", type=int, default=8, help="Rollouts per CEM iteration for --rl-tune.")
+    parser.add_argument("--rl-elite-fraction", type=float, default=0.25, help="Elite fraction used by CEM.")
+    parser.add_argument("--rl-seed", type=int, default=None, help="Random seed for residual policy search.")
+    parser.add_argument(
+        "--rl-output",
+        default=None,
+        help="Optional JSON path for residual policy tuning traces.",
+    )
+    parser.add_argument(
+        "--rl-stop-on-success",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Stop residual policy search after the first successful rollout.",
+    )
+    parser.add_argument(
+        "--rl-approach-offset-range",
+        type=float,
+        nargs=2,
+        default=(0.0, 0.05),
+        metavar=("MIN", "MAX"),
+        help="Meters to search along the grasp approach direction; positive drives deeper into the grasp.",
+    )
+    parser.add_argument(
+        "--rl-tcp-x-offset-range",
+        type=float,
+        nargs=2,
+        default=(-0.02, 0.02),
+        metavar=("MIN", "MAX"),
+        help="Meters to search along the TCP local x axis.",
+    )
+    parser.add_argument(
+        "--rl-tcp-y-offset-range",
+        type=float,
+        nargs=2,
+        default=(-0.02, 0.02),
+        metavar=("MIN", "MAX"),
+        help="Meters to search along the TCP local y/gripper-width axis.",
+    )
+    parser.add_argument(
+        "--rl-roll-delta-range",
+        type=float,
+        nargs=2,
+        default=(-0.35, 0.35),
+        metavar=("MIN", "MAX"),
+        help="Radians to search around the TCP local approach axis.",
+    )
+    parser.add_argument(
+        "--rl-gripper-open-range",
+        type=float,
+        nargs=2,
+        default=(0.5, 1.0),
+        metavar=("MIN", "MAX"),
+        help="Normalized ManiSkill gripper command range for pre/descend open stages.",
+    )
+    parser.add_argument(
+        "--rl-gripper-closed-range",
+        type=float,
+        nargs=2,
+        default=(-1.0, -0.2),
+        metavar=("MIN", "MAX"),
+        help="Normalized ManiSkill gripper command range for close/lift stages.",
+    )
     return parser.parse_args(argv)
 
 
@@ -188,6 +269,7 @@ def build_env(
     camera_name: str = "base_camera",
     camera_eye: Iterable[float] | None = None,
     camera_target: Iterable[float] | None = None,
+    control_mode: str = "pd_ee_pose",
 ):
     """Create the ManiSkill environment. Imports stay local for lightweight tests."""
 
@@ -214,7 +296,7 @@ def build_env(
     return gym.make(
         env_id,
         render_mode="rgb_array",
-        control_mode="pd_ee_pose",
+        control_mode=control_mode,
         robot_uids="panda",
         obs_mode="sensor_data",
         max_episode_steps=300,
@@ -314,6 +396,7 @@ def execute_pick(
     recorder: VideoRecorder | None = None,
     target_euler_xyz: np.ndarray | None = None,
     approach_axis_base: np.ndarray | None = None,
+    verbose: bool = True,
 ) -> dict[str, Any]:
     """Execute pre-grasp, descend, close, and lift stages."""
 
@@ -325,7 +408,7 @@ def execute_pick(
         if target_euler_xyz is None
         else _first_vector3(target_euler_xyz, "target_euler_xyz")
     )
-    print(f"  target_tcp_euler_xyz={np.round(target_euler, 4)}")
+    _log(verbose, f"  target_tcp_euler_xyz={np.round(target_euler, 4)}")
     stages = [
         ("pre", targets["pre"], motion.gripper_open, True),
         ("descend", targets["grasp"], motion.gripper_open, True),
@@ -336,7 +419,7 @@ def execute_pick(
     final_info: dict[str, Any] = {}
     for name, stage_target, gripper, wait_for_settle in stages:
         action = make_action(stage_target, target_euler, gripper)
-        print(f"  stage={name:<7} target_base={np.round(stage_target, 4)} gripper={gripper:.3f}")
+        _log(verbose, f"  stage={name:<7} target_base={np.round(stage_target, 4)} gripper={gripper:.3f}")
         settle_tolerance = (
             motion.descend_settle_pos_tolerance_m
             if name == "descend"
@@ -362,10 +445,10 @@ def execute_pick(
                 err = float(np.linalg.norm(stage_target - tcp_base))
                 reached = err <= settle_tolerance
             if _info_success(info):
-                print(f"    success signaled during {name}")
+                _log(verbose, f"    success signaled during {name}")
                 return {"success": True, "stage": name, "info": info}
             if _as_bool(truncated):
-                print(f"    truncated during {name}: {info}")
+                _log(verbose, f"    truncated during {name}: {info}")
                 return {"success": False, "stage": name, "truncated": True, "info": info}
             if wait_for_settle and tcp_base is None and step_index + 1 >= motion.stage_steps:
                 break
@@ -373,11 +456,12 @@ def execute_pick(
                 break
 
         if tcp_base is not None:
-            print(f"    tcp_base={np.round(tcp_base, 4)} err={err:.4f} steps={step_index + 1}")
+            _log(verbose, f"    tcp_base={np.round(tcp_base, 4)} err={err:.4f} steps={step_index + 1}")
         if wait_for_settle and not reached and name in {"pre", "descend"}:
-            print(
+            _log(
+                verbose,
                 f"    {name} did not converge within {max_steps} steps "
-                f"(tol={settle_tolerance:.4f})"
+                f"(tol={settle_tolerance:.4f})",
             )
             return {
                 "success": False,
@@ -398,14 +482,48 @@ def run_episode(
 ) -> dict[str, Any]:
     seed = args.seed + episode_index
     print(f"\n--- Episode {episode_index + 1}/{args.episodes} seed={seed} ---")
+
+    if args.rl_tune:
+        return run_rl_tuned_episode(env, grasp, args, episode_index, seed, recorder=recorder)
+
+    return run_grasp_episode_once(
+        env,
+        grasp,
+        args,
+        episode_index,
+        seed,
+        recorder=recorder,
+        residual_action=None,
+        save_zg_input=bool(args.save_zg_input_dir),
+        show_grasp_marker=bool(args.show_grasp_marker),
+        verbose=True,
+    )
+
+
+def run_grasp_episode_once(
+    env: Any,
+    grasp: GraspRecord,
+    args: argparse.Namespace,
+    episode_index: int,
+    seed: int,
+    recorder: VideoRecorder | None = None,
+    residual_action: ResidualGraspAction | None = None,
+    save_zg_input: bool = False,
+    show_grasp_marker: bool = False,
+    verbose: bool = True,
+) -> dict[str, Any]:
+    """Reset and execute one grasp rollout, optionally with a residual action."""
+
     obs, _ = env.reset(seed=seed)
-    if args.save_zg_input_dir:
+    initial_object_z = _target_object_world_z(env)
+    if save_zg_input and args.save_zg_input_dir:
         episode_dir = Path(args.save_zg_input_dir) / f"episode_{episode_index:03d}"
         bundle = extract_zerograsp_input(obs, env, args.camera, mask_mode=args.mask_mode)
         saved_dir = save_zerograsp_input_bundle(bundle, episode_dir)
-        print(
+        _log(
+            verbose,
             f"  ZeroGrasp input saved: {saved_dir} "
-            f"(mask_mode={bundle.mask_mode}, objects={len(bundle.object_records)})"
+            f"(mask_mode={bundle.mask_mode}, objects={len(bundle.object_records)})",
         )
 
     world_from_base = _robot_base_matrix(env)
@@ -415,7 +533,9 @@ def run_episode(
         world_from_base,
         approach_axis=args.approach_axis,
     )
-    raw_target = control_pose.position_base
+    raw_target = control_pose.position_base.copy()
+    if residual_action is not None:
+        control_pose = apply_residual_grasp_action(control_pose, residual_action)
     motion = MotionConfig(
         pregrasp_offset_m=args.pregrasp_offset,
         lift_offset_m=args.lift_offset,
@@ -425,9 +545,15 @@ def run_episode(
         settle_pos_tolerance_m=args.settle_pos_tolerance,
         descend_settle_pos_tolerance_m=args.descend_settle_pos_tolerance,
         workspace_z_min=args.workspace_z_min,
+        gripper_open=(
+            1.0 if residual_action is None else float(residual_action.gripper_open)
+        ),
+        gripper_closed=(
+            -1.0 if residual_action is None else float(residual_action.gripper_closed)
+        ),
     )
-    target = clamp_base_target(raw_target, z_min=motion.workspace_z_min)
-    if args.show_grasp_marker:
+    target = clamp_base_target(control_pose.position_base, z_min=motion.workspace_z_min)
+    if show_grasp_marker:
         marker_actors = add_current_grasp_marker(
             env,
             grasp,
@@ -435,32 +561,191 @@ def run_episode(
             args.approach_axis,
             center_world=base_point_to_world(target, world_from_base),
         )
-        print(f"  grasp marker actors added: {len(marker_actors)}")
+        _log(verbose, f"  grasp marker actors added: {len(marker_actors)}")
     if recorder is not None:
         recorder.capture(env)
-    print(f"  grasp source={grasp.source} score={grasp.score:.6f}")
-    print(f"  translation_camera={np.round(grasp.translation_m_camera, 4)}")
-    print(f"  target_base_raw={np.round(raw_target, 4)}")
-    print(f"  target_base_clamped={np.round(target, 4)}")
+    _log(verbose, f"  grasp source={grasp.source} score={grasp.score:.6f}")
+    _log(verbose, f"  translation_camera={np.round(grasp.translation_m_camera, 4)}")
+    _log(verbose, f"  target_base_raw={np.round(raw_target, 4)}")
+    if residual_action is not None:
+        _log(verbose, f"  residual_action={_round_dict(residual_action.to_dict())}")
+        _log(verbose, f"  target_base_adjusted={np.round(control_pose.position_base, 4)}")
+    _log(verbose, f"  target_base_clamped={np.round(target, 4)}")
+    _log(
+        verbose,
+        f"  gripper_open={motion.gripper_open:.3f} gripper_closed={motion.gripper_closed:.3f}",
+    )
     if args.position_only:
         target_euler = None
         approach_axis = None
-        print("  grasp rotation ignored: keeping current TCP orientation")
+        _log(verbose, "  grasp rotation ignored: keeping current TCP orientation")
     else:
         target_euler = control_pose.euler_xyz_base
         approach_axis = control_pose.approach_axis_base
-        print(f"  approach_axis_convention={args.approach_axis}")
-        print(f"  approach_axis_base={np.round(approach_axis, 4)}")
-        print(f"  grasp_tcp_euler_xyz={np.round(target_euler, 4)}")
+        _log(verbose, f"  approach_axis_convention={args.approach_axis}")
+        _log(verbose, f"  approach_axis_base={np.round(approach_axis, 4)}")
+        _log(verbose, f"  grasp_tcp_euler_xyz={np.round(target_euler, 4)}")
 
-    return execute_pick(
+    result = execute_pick(
         env,
         target,
         motion,
         recorder=recorder,
         target_euler_xyz=target_euler,
         approach_axis_base=approach_axis,
+        verbose=verbose,
     )
+    final_object_z = _target_object_world_z(env)
+    if initial_object_z is not None and final_object_z is not None:
+        result["object_lift_delta_m"] = float(final_object_z - initial_object_z)
+    if residual_action is not None:
+        result["rl_action"] = residual_action.to_dict()
+    return result
+
+
+def run_rl_tuned_episode(
+    env: Any,
+    grasp: GraspRecord,
+    args: argparse.Namespace,
+    episode_index: int,
+    seed: int,
+    recorder: VideoRecorder | None = None,
+) -> dict[str, Any]:
+    """Tune residual pose/gripper controls on the current scene seed, then execute best action."""
+
+    config = RLTuningConfig(
+        iterations=args.rl_iters,
+        population=args.rl_population,
+        elite_fraction=args.rl_elite_fraction,
+        seed=args.rl_seed if args.rl_seed is not None else seed,
+        bounds=_residual_action_bounds_from_args(args),
+        stop_on_success=bool(args.rl_stop_on_success),
+    )
+    print(
+        "  RL residual tuning enabled: "
+        f"method=CEM iters={config.iterations} population={config.population} "
+        f"elite_fraction={config.elite_fraction:.2f}"
+    )
+
+    def evaluate(
+        action: ResidualGraspAction,
+        iteration: int,
+        candidate_index: int,
+    ) -> RLRolloutEvaluation:
+        result = run_grasp_episode_once(
+            env,
+            grasp,
+            args,
+            episode_index,
+            seed,
+            recorder=None,
+            residual_action=action,
+            save_zg_input=False,
+            show_grasp_marker=False,
+            verbose=False,
+        )
+        reward = reward_from_rollout_result(result, lift_offset_m=args.lift_offset)
+        print(
+            f"    rl_iter={iteration} cand={candidate_index} "
+            f"reward={reward:.4f} success={bool(result.get('success'))} "
+            f"stage={result.get('stage')} "
+            f"approach_offset={action.approach_offset_m:.4f} "
+            f"closed={action.gripper_closed:.3f}"
+        )
+        return RLRolloutEvaluation(
+            reward=reward,
+            success=bool(result.get("success")),
+            result=result,
+        )
+
+    trace = tune_residual_policy(config, evaluate)
+    best_action = ResidualGraspAction(**trace["best_action"])
+    print(
+        "  RL best residual: "
+        f"reward={trace['best_reward']:.4f} success={trace['best_success']} "
+        f"action={_round_dict(best_action.to_dict())}"
+    )
+
+    final_result = run_grasp_episode_once(
+        env,
+        grasp,
+        args,
+        episode_index,
+        seed,
+        recorder=recorder,
+        residual_action=best_action,
+        save_zg_input=bool(args.save_zg_input_dir),
+        show_grasp_marker=bool(args.show_grasp_marker),
+        verbose=True,
+    )
+    final_result["rl_tuning"] = {
+        "method": trace["method"],
+        "best_reward": trace["best_reward"],
+        "best_success": trace["best_success"],
+        "best_action": trace["best_action"],
+        "iterations_completed": trace["iterations_completed"],
+    }
+    _write_rl_trace(args, episode_index, trace, final_result)
+    return final_result
+
+
+def apply_residual_grasp_action(
+    control_pose: GraspControlPose,
+    action: ResidualGraspAction,
+) -> GraspControlPose:
+    """Return a control pose corrected by a learned residual action."""
+
+    position, rotation = apply_residual_to_pose(
+        control_pose.position_base,
+        control_pose.rotation_base_tcp,
+        action,
+    )
+    return GraspControlPose(
+        position_base=position,
+        rotation_base_tcp=rotation,
+        euler_xyz_base=matrix_to_euler_xyz(rotation),
+        approach_axis_base=_unit(rotation[:, 2]),
+    )
+
+
+def _residual_action_bounds_from_args(args: argparse.Namespace) -> ResidualActionBounds:
+    return ResidualActionBounds.from_ranges(
+        approach_offset_range=_pair(args.rl_approach_offset_range, "rl_approach_offset_range"),
+        tcp_x_offset_range=_pair(args.rl_tcp_x_offset_range, "rl_tcp_x_offset_range"),
+        tcp_y_offset_range=_pair(args.rl_tcp_y_offset_range, "rl_tcp_y_offset_range"),
+        roll_delta_range=_pair(args.rl_roll_delta_range, "rl_roll_delta_range"),
+        gripper_open_range=_pair(args.rl_gripper_open_range, "rl_gripper_open_range"),
+        gripper_closed_range=_pair(args.rl_gripper_closed_range, "rl_gripper_closed_range"),
+    )
+
+
+def _pair(value: Iterable[float], name: str) -> tuple[float, float]:
+    values = tuple(float(v) for v in value)
+    if len(values) != 2:
+        raise ValueError(f"{name} must contain exactly two values.")
+    return values
+
+
+def _write_rl_trace(
+    args: argparse.Namespace,
+    episode_index: int,
+    trace: dict[str, Any],
+    final_result: dict[str, Any],
+) -> None:
+    output = args.rl_output
+    if output is None:
+        output = str(Path(args.zerograsp_output).expanduser().resolve() / "rl_tuning.json")
+    path = Path(output).expanduser().resolve()
+    if int(getattr(args, "episodes", 1)) > 1:
+        path = path.with_name(f"{path.stem}_episode_{episode_index:03d}{path.suffix}")
+    payload = dict(trace)
+    payload["episode_index"] = int(episode_index)
+    payload["final_result"] = _summarize_result(final_result)
+    if "object_lift_delta_m" in final_result:
+        payload["final_result"]["object_lift_delta_m"] = final_result["object_lift_delta_m"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(_sanitize_for_json(payload), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"  RL tuning trace saved: {path}")
 
 
 def add_current_grasp_marker(
@@ -628,6 +913,38 @@ def _tcp_world_position(env: Any) -> np.ndarray | None:
     return None
 
 
+def _target_object_world_z(env: Any) -> float | None:
+    root = getattr(env, "unwrapped", env)
+    for source_name in ("target_object", "obj", "_objs"):
+        for actor in _iter_actor_like(getattr(root, source_name, None)):
+            pose = getattr(actor, "pose", None)
+            if pose is None:
+                get_pose = getattr(actor, "get_pose", None)
+                if callable(get_pose):
+                    pose = get_pose()
+            if pose is None:
+                continue
+            try:
+                return float(_pose_position(pose)[2])
+            except Exception:
+                continue
+    return None
+
+
+def _iter_actor_like(value: Any):
+    if value is None:
+        return
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from _iter_actor_like(item)
+        return
+    if isinstance(value, (list, tuple, set)):
+        for item in value:
+            yield from _iter_actor_like(item)
+        return
+    yield value
+
+
 def _link_name(link: Any) -> str:
     get_name = getattr(link, "get_name", None)
     if callable(get_name):
@@ -706,6 +1023,29 @@ def _summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "stage": result.get("stage"),
         "truncated": bool(result.get("truncated", False)),
     }
+
+
+def _round_dict(values: dict[str, float], digits: int = 4) -> dict[str, float]:
+    return {key: float(round(float(value), digits)) for key, value in values.items()}
+
+
+def _log(enabled: bool, message: str) -> None:
+    if enabled:
+        print(message)
+
+
+def _sanitize_for_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _sanitize_for_json(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_for_json(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return _sanitize_for_json(value.tolist())
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, Path):
+        return str(value)
+    return value
 
 
 if __name__ == "__main__":

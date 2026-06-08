@@ -9,6 +9,7 @@ import numpy as np
 
 import maniskill_codex.execute_zerograsp_pick as execute_mod
 from maniskill_codex.execute_zerograsp_pick import (
+    apply_residual_grasp_action,
     base_point_to_world,
     build_env,
     build_stage_targets,
@@ -21,6 +22,7 @@ from maniskill_codex.execute_zerograsp_pick import (
     matrix_to_euler_xyz,
     parse_args,
 )
+from maniskill_codex.grasp_rl_tuning import ResidualGraspAction
 from maniskill_codex.zerograsp_outputs import GraspRecord
 
 
@@ -57,6 +59,11 @@ class ExecuteRunnerTests(unittest.TestCase):
         self.assertEqual(args.descend_settle_pos_tolerance, 0.02)
         self.assertFalse(args.show_grasp_marker)
         self.assertFalse(args.position_only)
+        self.assertFalse(args.rl_tune)
+        self.assertEqual(args.rl_iters, 3)
+        self.assertEqual(args.rl_population, 8)
+        self.assertEqual(tuple(args.rl_approach_offset_range), (0.0, 0.05))
+        self.assertEqual(tuple(args.rl_gripper_closed_range), (-1.0, -0.2))
 
     def test_parse_args_accepts_video_output(self):
         args = parse_args(
@@ -315,6 +322,32 @@ class ExecuteRunnerTests(unittest.TestCase):
         np.testing.assert_allclose(stages["pre"], [0.5, 0.0, 0.3])
         np.testing.assert_allclose(stages["grasp"], [0.5, 0.0, 0.2])
         np.testing.assert_allclose(stages["lift"], [0.5, 0.0, 0.35])
+
+    def test_apply_residual_grasp_action_moves_deeper_along_approach(self):
+        control_pose = compute_grasp_control_pose(
+            GraspRecord(
+                score=0.5,
+                width_m=0.04,
+                height_m=0.02,
+                depth_m=0.03,
+                translation_m_camera=np.array([0.1, 0.2, 0.3]),
+                rotation_matrix_camera=np.eye(3),
+                source="test",
+            ),
+            camera_model_matrix=np.eye(4),
+            world_from_base_matrix=np.eye(4),
+        )
+
+        adjusted = apply_residual_grasp_action(
+            control_pose,
+            ResidualGraspAction(approach_offset_m=0.02),
+        )
+
+        np.testing.assert_allclose(
+            adjusted.position_base,
+            control_pose.position_base + control_pose.approach_axis_base * 0.02,
+        )
+        np.testing.assert_allclose(adjusted.approach_axis_base, control_pose.approach_axis_base)
 
     def test_clamp_base_target_keeps_point_inside_workspace(self):
         target = clamp_base_target(np.array([0.1, -1.0, 2.0]))

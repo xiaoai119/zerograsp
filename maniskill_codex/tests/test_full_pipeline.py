@@ -32,6 +32,10 @@ class FullPipelineTests(unittest.TestCase):
         self.assertEqual(args.stage_max_steps, 80)
         self.assertEqual(args.settle_pos_tolerance, 0.01)
         self.assertEqual(args.descend_settle_pos_tolerance, 0.02)
+        self.assertFalse(args.rl_tune)
+        self.assertEqual(args.rl_iters, 3)
+        self.assertEqual(args.rl_population, 8)
+        self.assertEqual(tuple(args.rl_approach_offset_range), (0.0, 0.05))
         self.assertEqual(args.maniskill_env_name, "maniskill")
         self.assertEqual(args.zerograsp_env_name, "graduate")
         self.assertFalse(args.position_only)
@@ -45,6 +49,7 @@ class FullPipelineTests(unittest.TestCase):
             self.assertEqual(layout.output_dir, layout.run_dir / "zg_output")
             self.assertEqual(layout.projection_path, layout.run_dir / "grasp_projection.png")
             self.assertEqual(layout.video_path, layout.run_dir / "execution.mp4")
+            self.assertEqual(layout.rl_tuning_path, layout.run_dir / "rl_tuning.json")
             self.assertEqual(layout.manifest_path, layout.run_dir / "run_manifest.json")
             self.assertTrue(layout.logs_dir.is_dir())
 
@@ -70,6 +75,18 @@ class FullPipelineTests(unittest.TestCase):
             pregrasp_offset=0.1,
             lift_offset=0.15,
             video_fps=12,
+            rl_tune=False,
+            rl_iters=3,
+            rl_population=8,
+            rl_elite_fraction=0.25,
+            rl_seed=None,
+            rl_stop_on_success=True,
+            rl_approach_offset_range=(0.0, 0.05),
+            rl_tcp_x_offset_range=(-0.02, 0.02),
+            rl_tcp_y_offset_range=(-0.02, 0.02),
+            rl_roll_delta_range=(-0.35, 0.35),
+            rl_gripper_open_range=(0.5, 1.0),
+            rl_gripper_closed_range=(-1.0, -0.2),
             checkpoint="checkpoints/zerograsp_cvpr2025/zerograsp_demo.ckpt",
             config="configs/maniskill.yaml",
             device=None,
@@ -88,6 +105,7 @@ class FullPipelineTests(unittest.TestCase):
             logs_dir=Path("/tmp/run/logs"),
             projection_path=Path("/tmp/run/grasp_projection.png"),
             video_path=Path("/tmp/run/execution.mp4"),
+            rl_tuning_path=Path("/tmp/run/rl_tuning.json"),
             manifest_path=Path("/tmp/run/run_manifest.json"),
         )
 
@@ -122,6 +140,45 @@ class FullPipelineTests(unittest.TestCase):
         self.assertIn("--workspace-z-min", steps[3].module_args)
         self.assertIn("0.03", steps[3].module_args)
         self.assertIn("--show-grasp-marker", steps[3].module_args)
+
+    def test_build_pipeline_steps_forwards_rl_tuning_args(self):
+        args = parse_args(
+            [
+                "--rl-tune",
+                "--rl-iters",
+                "2",
+                "--rl-population",
+                "4",
+                "--rl-approach-offset-range",
+                "0.01",
+                "0.06",
+                "--no-rl-stop-on-success",
+            ]
+        )
+        layout = PipelineLayout(
+            run_dir=Path("/tmp/run"),
+            input_dir=Path("/tmp/run/zg_input"),
+            output_dir=Path("/tmp/run/zg_output"),
+            logs_dir=Path("/tmp/run/logs"),
+            projection_path=Path("/tmp/run/grasp_projection.png"),
+            video_path=Path("/tmp/run/execution.mp4"),
+            rl_tuning_path=Path("/tmp/run/rl_tuning.json"),
+            manifest_path=Path("/tmp/run/run_manifest.json"),
+        )
+
+        execute_step = build_pipeline_steps(args, layout)[-1]
+
+        self.assertIn("--rl-tune", execute_step.module_args)
+        self.assertIn("--rl-output", execute_step.module_args)
+        self.assertIn(str(layout.rl_tuning_path), execute_step.module_args)
+        self.assertIn("--rl-iters", execute_step.module_args)
+        self.assertIn("2", execute_step.module_args)
+        self.assertIn("--rl-population", execute_step.module_args)
+        self.assertIn("4", execute_step.module_args)
+        self.assertIn("--rl-approach-offset-range", execute_step.module_args)
+        self.assertIn("0.01", execute_step.module_args)
+        self.assertIn("0.06", execute_step.module_args)
+        self.assertIn("--no-rl-stop-on-success", execute_step.module_args)
 
     def test_conda_python_command_quotes_module_args(self):
         command = conda_python_command(

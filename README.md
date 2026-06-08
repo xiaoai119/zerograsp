@@ -129,8 +129,23 @@ python -m maniskill_codex.run_full_pipeline --no-conda
 - `zg_output/recommended_grasp_top1.json`
 - `grasp_projection.png`
 - `execution.mp4`
+- `rl_tuning.json`：仅在开启 `--rl-tune` 时生成，记录 residual policy 搜索轨迹和最佳微调量
 - `logs/`
 - `run_manifest.json`
+
+球体等光滑目标如果出现抓取中心落在表面、闭合后容易把物体推走的问题，可以先开启执行阶段的 residual 强化学习微调。它不会改 ZeroGrasp 模型输出，而是在 ManiSkill 中用 CEM rollout 搜索一个小的执行残差：沿 approach 方向加深、TCP 局部横向偏移、绕 approach 小角度滚转，以及归一化夹爪开/合命令。
+
+```bash
+python -m maniskill_codex.run_full_pipeline \
+  --env-id PickSingleYCB-v1 \
+  --seed 42 \
+  --rl-tune \
+  --rl-iters 3 \
+  --rl-population 8 \
+  --rl-approach-offset-range 0.0 0.05
+```
+
+对“球体表面抓取深度不够”的情况，`--rl-approach-offset-range` 的正方向表示沿夹爪 approach 方向继续深入目标，默认搜索 `0-5cm`。
 
 如果要使用宿主机上已有的输入目录，可以把路径放在当前工作目录下，然后传容器内路径：
 
