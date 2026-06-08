@@ -58,9 +58,10 @@ def main(argv: Iterable[str] | None = None) -> int:
         input_dir = source_root / f"seed{seed:03d}" / "setup" / "zg_input"
         output_dir = output_root / f"seed{seed:03d}" / "graspnet_output"
         candidate_path = output_dir / "recommended_grasp_top1.json"
+        topk_path = output_dir / "recommended_grasps_topk.json"
         started = time.time()
         try:
-            if args.reuse_existing and candidate_path.is_file():
+            if args.reuse_existing and candidate_path.is_file() and topk_path.is_file():
                 report = json.loads(
                     (output_dir / "run_report.json").read_text(encoding="utf-8")
                 )

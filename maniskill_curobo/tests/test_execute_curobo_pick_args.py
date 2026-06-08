@@ -20,6 +20,7 @@ from maniskill_curobo.scripts.execute_curobo_pick import (
     build_stage_targets,
     copy_zerograsp_output,
     grasp_depth_attempt_scales,
+    load_grasp_candidates,
     parse_args,
     repeat_last_action,
     save_grasp_projection,
@@ -41,6 +42,7 @@ class ExecuteCuroboPickArgsTest(unittest.TestCase):
         self.assertEqual(args.grasp_depth_scale, 0.0)
         self.assertEqual(args.grasp_depth_max_offset, 0.04)
         self.assertFalse(args.grasp_depth_auto_fallback)
+        self.assertEqual(args.candidate_top_k, 1)
         self.assertEqual(
             args.grasp_depth_fallback_fractions,
             [1.0, 0.75, 0.5, 0.25, 0.0],
@@ -339,6 +341,77 @@ class ExecuteCuroboPickArgsTest(unittest.TestCase):
                 '{"score": 1.0}',
             )
             self.assertEqual((copied / "raw_outputs" / "obj_001.grasp.npy").read_bytes(), b"fake")
+
+    def test_load_grasp_candidates_reads_topk_json_by_score(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            payload = {
+                "grasps": [
+                    {
+                        "score": 0.4,
+                        "width_m": 0.05,
+                        "height_m": 0.02,
+                        "depth_m": 0.03,
+                        "rotation_matrix_camera": np.eye(3).tolist(),
+                        "translation_m_camera": [0.0, 0.0, 0.5],
+                        "object_id": 1,
+                    },
+                    {
+                        "score": 0.9,
+                        "width_m": 0.06,
+                        "height_m": 0.02,
+                        "depth_m": 0.04,
+                        "rotation_matrix_camera": np.eye(3).tolist(),
+                        "translation_m_camera": [0.1, 0.0, 0.5],
+                        "object_id": 1,
+                    },
+                ]
+            }
+            (output_dir / "recommended_grasps_topk.json").write_text(
+                json.dumps(payload),
+                encoding="utf-8",
+            )
+
+            candidates = load_grasp_candidates(output_dir, top_k=2)
+
+            self.assertEqual(len(candidates), 2)
+            self.assertAlmostEqual(candidates[0].score, 0.9)
+            self.assertAlmostEqual(candidates[1].score, 0.4)
+
+    def test_load_grasp_candidates_prefers_raw_arrays_for_topk_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            raw_dir = output_dir / "raw_outputs"
+            raw_dir.mkdir()
+            (output_dir / "recommended_grasp_top1.json").write_text(
+                json.dumps(
+                    {
+                        "score": 0.1,
+                        "width_m": 0.04,
+                        "height_m": 0.02,
+                        "depth_m": 0.02,
+                        "rotation_matrix_camera": np.eye(3).tolist(),
+                        "translation_m_camera": [0.0, 0.0, 0.5],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            rows = np.array(
+                [
+                    [0.2, 0.04, 0.02, 0.02, *np.eye(3).reshape(-1), 0.0, 0.0, 0.5, 1],
+                    [0.8, 0.05, 0.02, 0.03, *np.eye(3).reshape(-1), 0.1, 0.0, 0.5, 1],
+                ],
+                dtype=np.float64,
+            )
+            np.save(raw_dir / "object_000_label_1.grasp.npy", rows)
+
+            top1 = load_grasp_candidates(output_dir, top_k=1)
+            topk = load_grasp_candidates(output_dir, top_k=2)
+
+            self.assertEqual(len(top1), 1)
+            self.assertAlmostEqual(top1[0].score, 0.1)
+            self.assertEqual(len(topk), 2)
+            self.assertAlmostEqual(topk[0].score, 0.8)
 
     def test_copy_zerograsp_output_is_noop_when_source_is_destination(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

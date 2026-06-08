@@ -131,13 +131,36 @@ class GraspNetBaselineRuntime:
         raw_dir.mkdir(parents=True, exist_ok=True)
         np.save(raw_dir / "graspnet.grasp.npy", raw_array)
         recommended = None
+        topk_recommended: list[dict[str, Any]] = []
         if len(grasp_group) > 0:
+            for rank in range(min(len(grasp_group), 200)):
+                grasp_json = grasp_to_standard_json(
+                    grasp_group[rank],
+                    object_id=prepared.target_label,
+                )
+                grasp_json["rank"] = int(rank)
+                topk_recommended.append(grasp_json)
             recommended = grasp_to_standard_json(
                 grasp_group[0],
                 object_id=prepared.target_label,
             )
+            recommended["rank"] = 0
             (output / "recommended_grasp_top1.json").write_text(
                 json.dumps(recommended, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            (output / "recommended_grasps_topk.json").write_text(
+                json.dumps(
+                    {
+                        "model": "graspnet-baseline",
+                        "n_grasps": len(topk_recommended),
+                        "n_grasps_final": int(len(grasp_group)),
+                        "grasps": topk_recommended,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
                 encoding="utf-8",
             )
 
@@ -149,6 +172,7 @@ class GraspNetBaselineRuntime:
             "n_grasps_target_filtered": target_filtered_count,
             "n_grasps_final": int(len(grasp_group)),
             "recommended_grasp": recommended,
+            "n_recommended_grasps_topk": len(topk_recommended),
             "input": {
                 "input_dir": str(Path(input_dir).expanduser().resolve()),
                 "target_label": prepared.target_label,

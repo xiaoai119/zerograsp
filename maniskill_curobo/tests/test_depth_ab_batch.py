@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 import tempfile
 from pathlib import Path
@@ -20,6 +21,8 @@ from maniskill_curobo.scripts.run_zerograsp_depth_ab_batch import (
     parse_args,
     scene_model_signature,
     validate_persistent_worker_args,
+    variant_is_complete,
+    variant_specs,
 )
 
 
@@ -39,9 +42,38 @@ class DepthAbBatchTest(unittest.TestCase):
         self.assertEqual(args.baseline_depth_scale, 0.0)
         self.assertEqual(args.depth_scale, 1.0)
         self.assertEqual(args.grasp_depth_max_offset, 0.04)
+        self.assertEqual(args.candidate_top_k, 20)
         self.assertEqual(args.settle_before_export_steps, 20)
         self.assertFalse(args.depth_auto_fallback)
+        self.assertFalse(args.include_corrected_depth)
         self.assertTrue(args.persistent_zerograsp_worker)
+        self.assertEqual(
+            [spec["label"] for spec in variant_specs(args)],
+            ["baseline", "depth"],
+        )
+
+    def test_parse_args_can_add_corrected_depth_treatment(self) -> None:
+        args = parse_args(
+            [
+                "--env-id",
+                "PickSingleYCB-v1",
+                "--output-root",
+                "out",
+                "--include-corrected-depth",
+                "--corrected-depth-scale",
+                "1.0",
+            ]
+        )
+
+        specs = variant_specs(args)
+
+        self.assertEqual(
+            [spec["label"] for spec in specs],
+            ["baseline", "depth", "corrected_depth"],
+        )
+        self.assertFalse(specs[1]["depth_auto_fallback"])
+        self.assertTrue(specs[2]["depth_auto_fallback"])
+        self.assertEqual(specs[2]["scale"], 1.0)
 
     def test_parse_args_can_enable_depth_auto_fallback(self) -> None:
         args = parse_args(
@@ -115,6 +147,42 @@ class DepthAbBatchTest(unittest.TestCase):
 
         self.assertEqual(compare_variants(failed, success)["change"], "improved")
         self.assertEqual(compare_variants(success, failed)["change"], "regressed")
+
+    def test_variant_reuse_uses_requested_depth_scale_for_topk_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            (run_dir / "run_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "grasp": {
+                            "candidate_selection": {
+                                "enabled": True,
+                                "requested_depth_scale": 1.0,
+                                "selected_depth_scale": 0.5,
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            existing = {"status": "complete"}
+
+            self.assertTrue(
+                variant_is_complete(
+                    existing,
+                    label="corrected_depth",
+                    scale=1.0,
+                    run_dir=run_dir,
+                )
+            )
+            self.assertFalse(
+                variant_is_complete(
+                    existing,
+                    label="corrected_depth",
+                    scale=0.5,
+                    run_dir=run_dir,
+                )
+            )
 
     def test_input_bundle_rejects_an_empty_target_mask(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

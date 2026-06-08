@@ -14,7 +14,8 @@ COMMON_ARGS=(
   --seed-end 200
   --baseline-depth-scale 0.0
   --depth-scale 1.0
-  --depth-auto-fallback
+  --include-corrected-depth
+  --corrected-depth-scale 1.0
   --grasp-depth-max-offset 0.04
   --workspace-z-min 0.01
   --close-steps 20

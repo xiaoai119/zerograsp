@@ -74,6 +74,35 @@ def grasp_prediction_to_json(grasp: Any, source_file: str | None = None) -> dict
     return data
 
 
+def grasp_array_row_to_json(
+    row: np.ndarray,
+    *,
+    source_file: str,
+    object_index: int | None = None,
+    object_id: int | None = None,
+) -> dict[str, Any]:
+    arr = np.asarray(row, dtype=np.float64).reshape(-1)
+    if arr.shape[0] < 16:
+        raise ValueError(f"Expected grasp row with at least 16 values, got {arr.shape[0]}.")
+    resolved_object_id = object_id
+    if resolved_object_id is None and arr.shape[0] > 16:
+        resolved_object_id = int(arr[16])
+    data = {
+        "score": float(arr[0]),
+        "width_m": float(arr[1]),
+        "height_m": float(arr[2]),
+        "depth_m": float(arr[3]),
+        "rotation_matrix_camera": arr[4:13].reshape(3, 3).tolist(),
+        "translation_m_camera": arr[13:16].reshape(3).tolist(),
+        "source_file": source_file,
+    }
+    if object_index is not None:
+        data["object_index"] = int(object_index)
+    if resolved_object_id is not None:
+        data["object_id"] = int(resolved_object_id)
+    return data
+
+
 def save_zerograsp_result(result: Any, output_dir: str | Path) -> dict[str, Any]:
     out = Path(output_dir).expanduser().resolve()
     raw_dir = out / "raw_outputs"
@@ -81,12 +110,26 @@ def save_zerograsp_result(result: Any, output_dir: str | Path) -> dict[str, Any]
 
     object_reports = []
     source_by_object_id = {}
+    topk_candidates: list[dict[str, Any]] = []
     for obj in result.objects:
         raw_name = f"object_{int(obj.object_index):03d}_label_{int(obj.object_id)}.grasp.npy"
         raw_path = raw_dir / raw_name
-        np.save(raw_path, np.asarray(obj.grasp_group_array, dtype=np.float64))
+        grasp_array = np.asarray(obj.grasp_group_array, dtype=np.float64)
+        np.save(raw_path, grasp_array)
         rel_raw = str(raw_path.relative_to(out))
         source_by_object_id[int(obj.object_id)] = rel_raw
+        if grasp_array.ndim == 1 and grasp_array.size:
+            grasp_array = grasp_array.reshape(1, -1)
+        if grasp_array.ndim == 2:
+            for row in grasp_array:
+                topk_candidates.append(
+                    grasp_array_row_to_json(
+                        row,
+                        source_file=rel_raw,
+                        object_index=int(obj.object_index),
+                        object_id=int(obj.object_id),
+                    )
+                )
         object_reports.append(
             {
                 "object_id": int(obj.object_id),
@@ -110,11 +153,30 @@ def save_zerograsp_result(result: Any, output_dir: str | Path) -> dict[str, Any]
             encoding="utf-8",
         )
 
+    topk_candidates.sort(key=lambda item: float(item["score"]), reverse=True)
+    saved_topk_candidates = topk_candidates[:200]
+    if saved_topk_candidates:
+        (out / "recommended_grasps_topk.json").write_text(
+            json.dumps(
+                {
+                    "model": "zerograsp",
+                    "n_grasps": len(topk_candidates),
+                    "n_grasps_saved": len(saved_topk_candidates),
+                    "grasps": saved_topk_candidates,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
     report = {
         "runtime_sec": float(getattr(result, "runtime_sec", 0.0)),
         "n_objects": len(result.objects),
         "objects": object_reports,
         "recommended_grasp": recommended_json,
+        "n_recommended_grasps_topk": len(saved_topk_candidates),
     }
     (out / "run_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n",

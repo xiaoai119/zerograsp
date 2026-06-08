@@ -136,6 +136,16 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         help="Directory containing recommended_grasp_top1.json or raw_outputs/*.grasp.npy.",
     )
     parser.add_argument(
+        "--candidate-top-k",
+        type=int,
+        default=1,
+        help=(
+            "Consider this many model-ranked grasp candidates and select the first "
+            "candidate whose pre-grasp and grasp stages are both cuRobo-plannable. "
+            "A value of 1 preserves the original top1-only behavior."
+        ),
+    )
+    parser.add_argument(
         "--target-base",
         type=float,
         nargs=3,
@@ -407,7 +417,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         )
         manifest["curobo_scene"] = scene_model["manifest"]
         marker_actors = []
-        if args.show_grasp_marker:
+        if args.show_grasp_marker and int(args.candidate_top_k) <= 1:
             marker_width = float(args.marker_width if args.marker_width is not None else grasp_manifest.get("width_m", 0.08) or 0.08)
             if args.marker_grasp_center_base is None:
                 marker_geometry = build_control_pose_marker_geometry(
@@ -461,7 +471,14 @@ def main(argv: Iterable[str] | None = None) -> int:
                     f"width_axis={np.round(grasp_center_geometry.width_axis_world, 4).tolist()}"
                 )
         else:
-            manifest["grasp_marker"] = {"enabled": False}
+            manifest["grasp_marker"] = {
+                "enabled": False,
+                "reason": (
+                    "suppressed_during_topk_candidate_selection"
+                    if args.show_grasp_marker and int(args.candidate_top_k) > 1
+                    else "disabled_by_args"
+                ),
+            }
         motion = MotionConfig(
             pregrasp_offset_m=args.pregrasp_offset,
             lift_offset_m=args.lift_offset,
@@ -492,6 +509,31 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         qpos = first_vector(robot.get_qpos(), "robot qpos")
         q_start = ordered_values(active_joint_names, qpos, planner.joint_names).astype(np.float32)
+        if (
+            effective_zerograsp_output is not None
+            and int(args.candidate_top_k) > 1
+            and args.target_base is None
+        ):
+            control_pose, zero_depth_control_pose, grasp_manifest, targets = (
+                select_plannable_grasp_candidate(
+                    env=env,
+                    args=args,
+                    zerograsp_output_dir=effective_zerograsp_output,
+                    planner=planner,
+                    q_start=q_start,
+                    motion=motion,
+                    output_dir=output_dir,
+                    diagnostics_path=diagnostics_path,
+                )
+            )
+            manifest["grasp"] = grasp_manifest
+            manifest["stage_targets"] = {
+                name: {
+                    "position_base": target["position"].tolist(),
+                    "quaternion_wxyz": target["quaternion"].tolist(),
+                }
+                for name, target in targets.items()
+            }
         if recorder is not None:
             recorder.capture(env)
 
@@ -501,7 +543,14 @@ def main(argv: Iterable[str] | None = None) -> int:
             ("lift", motion.gripper_closed),
         ]
         for stage_name, gripper in stages:
-            if stage_name == "grasp" and args.grasp_depth_auto_fallback:
+            selection_depth_scale = (
+                (grasp_manifest.get("candidate_selection") or {}).get("selected_depth_scale")
+            )
+            if (
+                stage_name == "grasp"
+                and args.grasp_depth_auto_fallback
+                and selection_depth_scale is None
+            ):
                 grasp_manifest.setdefault(
                     "grasp_depth_offset_requested",
                     dict(grasp_manifest.get("grasp_depth_offset") or {}),
@@ -820,7 +869,12 @@ def copy_zerograsp_output(source_dir: str | Path, destination_dir: str | Path) -
     destination.mkdir(parents=True, exist_ok=True)
 
     copied_any = False
-    for name in ("recommended_grasp_top1.json", "report.json"):
+    for name in (
+        "recommended_grasp_top1.json",
+        "recommended_grasps_topk.json",
+        "report.json",
+        "run_report.json",
+    ):
         path = source / name
         if path.is_file():
             shutil.copy2(path, destination / name)
@@ -834,7 +888,7 @@ def copy_zerograsp_output(source_dir: str | Path, destination_dir: str | Path) -
         copied_any = True
     if not copied_any:
         raise FileNotFoundError(
-            f"{source} does not contain recommended_grasp_top1.json, report.json, "
+            f"{source} does not contain recommended_grasp_top1.json, recommended_grasps_topk.json, report.json, "
             "raw_outputs/, or *.grasp.npy files."
         )
     return destination
@@ -887,7 +941,18 @@ def load_control_pose(
     if zerograsp_output_dir is None:
         raise ValueError("Provide --zerograsp-output or --target-base.")
 
-    grasp = load_best_grasp(zerograsp_output_dir)
+    grasp = load_grasp_candidates(zerograsp_output_dir, top_k=1)[0]
+    return control_pose_from_grasp(env, args, grasp, depth_scale=args.grasp_depth_scale)
+
+
+def control_pose_from_grasp(
+    env: Any,
+    args: argparse.Namespace,
+    grasp: GraspRecord,
+    *,
+    depth_scale: float,
+    log: bool = True,
+) -> tuple[ControlPose, ControlPose, dict[str, Any]]:
     camera_model = camera_model_matrix(env, args.camera)
     world_from_base = robot_base_matrix(env)
     zero_depth_control_pose = compute_grasp_control_pose(
@@ -916,7 +981,7 @@ def load_control_pose(
     control_pose, depth_offset_manifest = apply_grasp_depth_offset(
         zero_depth_control_pose,
         depth_m=grasp.depth_m,
-        scale=args.grasp_depth_scale,
+        scale=depth_scale,
         max_offset_m=args.grasp_depth_max_offset,
         workspace_z_min=args.workspace_z_min,
     )
@@ -924,6 +989,7 @@ def load_control_pose(
         "source": grasp.source,
         "score": grasp.score,
         "width_m": grasp.width_m,
+        "height_m": grasp.height_m,
         "depth_m": grasp.depth_m,
         "object_index": grasp.object_index,
         "object_id": grasp.object_id,
@@ -944,17 +1010,18 @@ def load_control_pose(
         "camera_eye": list(args.camera_eye),
         "camera_target": list(args.camera_target),
     }
-    print(f"grasp_source={grasp.source} score={grasp.score:.6f}")
-    print(f"target_grasp_center_base={np.round(control_pose.position_base, 4).tolist()}")
-    print(f"target_panda_hand_base={np.round(planner_position_base(control_pose), 4).tolist()}")
-    print(f"target_quat_wxyz={np.round(planner_quaternion_wxyz(control_pose), 4).tolist()}")
-    print(f"approach_axis_base={np.round(control_pose.approach_axis_base, 4).tolist()}")
-    print(
-        "grasp_depth_offset "
-        f"depth={grasp.depth_m:.4f} scale={args.grasp_depth_scale:.3f} "
-        f"requested={depth_offset_manifest['requested_offset_m']:.4f} "
-        f"applied={depth_offset_manifest['applied_distance_m']:.4f}"
-    )
+    if log:
+        print(f"grasp_source={grasp.source} score={grasp.score:.6f}")
+        print(f"target_grasp_center_base={np.round(control_pose.position_base, 4).tolist()}")
+        print(f"target_panda_hand_base={np.round(planner_position_base(control_pose), 4).tolist()}")
+        print(f"target_quat_wxyz={np.round(planner_quaternion_wxyz(control_pose), 4).tolist()}")
+        print(f"approach_axis_base={np.round(control_pose.approach_axis_base, 4).tolist()}")
+        print(
+            "grasp_depth_offset "
+            f"depth={grasp.depth_m:.4f} scale={depth_scale:.3f} "
+            f"requested={depth_offset_manifest['requested_offset_m']:.4f} "
+            f"applied={depth_offset_manifest['applied_distance_m']:.4f}"
+        )
     return control_pose, zero_depth_control_pose, manifest
 
 
@@ -1133,6 +1200,7 @@ def plan_stage(
     stage_name: str,
     diagnostics_path: Path | None = None,
     diagnostic_metadata: dict[str, Any] | None = None,
+    save_plan: bool = True,
 ) -> PlannedStage:
     import torch
     from curobo.types import GoalToolPose, JointState
@@ -1173,19 +1241,20 @@ def plan_stage(
     positions = squeeze_trajectory_positions(interpolated.position.detach().cpu().numpy())
     joint_names = list(interpolated.joint_names)
     output_path = output_dir / f"curobo_plan_{stage_name}.npz"
-    np.savez(
-        output_path,
-        stage=stage_name,
-        target_position=np.asarray(target_position, dtype=np.float32),
-        target_quaternion=np.asarray(target_quaternion, dtype=np.float32),
-        planner_joint_names=np.array(planner.joint_names),
-        trajectory_joint_names=np.array(joint_names),
-        trajectory_positions=positions,
-        q_start=np.asarray(q_start, dtype=np.float32),
-    )
+    if save_plan:
+        np.savez(
+            output_path,
+            stage=stage_name,
+            target_position=np.asarray(target_position, dtype=np.float32),
+            target_quaternion=np.asarray(target_quaternion, dtype=np.float32),
+            planner_joint_names=np.array(planner.joint_names),
+            trajectory_joint_names=np.array(joint_names),
+            trajectory_positions=positions,
+            q_start=np.asarray(q_start, dtype=np.float32),
+        )
     print(
         f"stage={stage_name:<5} target={np.round(target_position, 4).tolist()} "
-        f"waypoints={positions.shape[0]} plan={output_path}"
+        f"waypoints={positions.shape[0]} plan={output_path if save_plan else '<preflight>'}"
     )
     return PlannedStage(
         name=stage_name,
@@ -1195,6 +1264,158 @@ def plan_stage(
         trajectory_joint_names=joint_names,
         output_path=output_path,
     )
+
+
+def select_plannable_grasp_candidate(
+    *,
+    env: Any,
+    args: argparse.Namespace,
+    zerograsp_output_dir: Path,
+    planner: Any,
+    q_start: np.ndarray,
+    motion: MotionConfig,
+    output_dir: Path,
+    diagnostics_path: Path,
+) -> tuple[ControlPose, ControlPose, dict[str, Any], dict[str, dict[str, np.ndarray]]]:
+    """Select the highest-scored top-K candidate with plannable pre and grasp stages."""
+
+    top_k = max(1, int(args.candidate_top_k))
+    candidates = load_grasp_candidates(zerograsp_output_dir, top_k=top_k)
+    if not candidates:
+        raise ValueError(f"No grasp candidates found in {zerograsp_output_dir}.")
+
+    attempts: list[dict[str, Any]] = []
+    selected: tuple[ControlPose, ControlPose, dict[str, Any], dict[str, dict[str, np.ndarray]]] | None = None
+    selected_attempt: dict[str, Any] | None = None
+    for rank, grasp in enumerate(candidates):
+        depth_scales = (
+            grasp_depth_attempt_scales(
+                args.grasp_depth_scale,
+                args.grasp_depth_fallback_fractions,
+            )
+            if args.grasp_depth_auto_fallback
+            else [float(args.grasp_depth_scale)]
+        )
+        for depth_scale in depth_scales:
+            control_pose, zero_depth_control_pose, grasp_manifest = control_pose_from_grasp(
+                env,
+                args,
+                grasp,
+                depth_scale=depth_scale,
+                log=False,
+            )
+            targets = build_stage_targets(
+                control_pose,
+                motion,
+                pregrasp_control_pose=zero_depth_control_pose,
+            )
+            attempt = {
+                "rank": int(rank),
+                "score": float(grasp.score),
+                "source": grasp.source,
+                "object_id": grasp.object_id,
+                "depth_m": float(grasp.depth_m),
+                "depth_scale": float(depth_scale),
+                "grasp_position_base": grasp_manifest["position_base"],
+                "planner_position_base": grasp_manifest["planner_position_base"],
+                "success": False,
+            }
+            try:
+                pre_plan = plan_stage(
+                    planner=planner,
+                    q_start=q_start,
+                    target_position=targets["pre"]["position"],
+                    target_quaternion=targets["pre"]["quaternion"],
+                    output_dir=output_dir,
+                    stage_name="candidate_pre",
+                    diagnostics_path=diagnostics_path,
+                    diagnostic_metadata={
+                        "candidate_selection": True,
+                        "candidate_rank": int(rank),
+                        "candidate_score": float(grasp.score),
+                        "candidate_depth_scale": float(depth_scale),
+                    },
+                    save_plan=False,
+                )
+                q_after_pre = ordered_values(
+                    pre_plan.trajectory_joint_names,
+                    pre_plan.trajectory_positions[-1],
+                    planner.joint_names,
+                ).astype(np.float32)
+                _grasp_plan = plan_stage(
+                    planner=planner,
+                    q_start=q_after_pre,
+                    target_position=targets["grasp"]["position"],
+                    target_quaternion=targets["grasp"]["quaternion"],
+                    output_dir=output_dir,
+                    stage_name="candidate_grasp",
+                    diagnostics_path=diagnostics_path,
+                    diagnostic_metadata={
+                        "candidate_selection": True,
+                        "candidate_rank": int(rank),
+                        "candidate_score": float(grasp.score),
+                        "candidate_depth_scale": float(depth_scale),
+                    },
+                    save_plan=False,
+                )
+            except RuntimeError as exc:
+                attempt["failure_reason"] = str(exc)
+                attempts.append(attempt)
+                continue
+
+            attempt["success"] = True
+            attempts.append(attempt)
+            selected = (control_pose, zero_depth_control_pose, grasp_manifest, targets)
+            selected_attempt = attempt
+            break
+        if selected is not None:
+            break
+
+    if selected is None or selected_attempt is None:
+        selection_manifest = {
+            "enabled": True,
+            "top_k_requested": top_k,
+            "n_candidates_loaded": len(candidates),
+            "requested_depth_scale": float(args.grasp_depth_scale),
+            "selected_rank": None,
+            "attempts": attempts,
+        }
+        append_planning_diagnostic(
+            diagnostics_path,
+            {
+                "stage": "candidate_selection",
+                "success": False,
+                "failure_reason": "no_plannable_candidate",
+                "candidate_selection": selection_manifest,
+            },
+        )
+        raise RuntimeError(
+            f"cuRobo candidate selection failed: no plannable candidate in top-{top_k}"
+        )
+
+    control_pose, zero_depth_control_pose, grasp_manifest, targets = selected
+    grasp_manifest["candidate_selection"] = {
+        "enabled": True,
+        "top_k_requested": top_k,
+        "n_candidates_loaded": len(candidates),
+        "requested_depth_scale": float(args.grasp_depth_scale),
+        "selected_rank": selected_attempt["rank"],
+        "selected_score": selected_attempt["score"],
+        "selected_depth_scale": selected_attempt["depth_scale"],
+        "attempts": attempts,
+    }
+    print(
+        "candidate_selected "
+        f"rank={selected_attempt['rank']} "
+        f"score={selected_attempt['score']:.6f} "
+        f"depth_scale={selected_attempt['depth_scale']:.3f} "
+        f"source={selected_attempt['source']}"
+    )
+    print(f"target_grasp_center_base={np.round(control_pose.position_base, 4).tolist()}")
+    print(f"target_panda_hand_base={np.round(planner_position_base(control_pose), 4).tolist()}")
+    print(f"target_quat_wxyz={np.round(planner_quaternion_wxyz(control_pose), 4).tolist()}")
+    print(f"approach_axis_base={np.round(control_pose.approach_axis_base, 4).tolist()}")
+    return control_pose, zero_depth_control_pose, grasp_manifest, targets
 
 
 def execute_action_waypoints(
@@ -1544,52 +1765,94 @@ def marker_manifest(geometry: GraspMarkerGeometry, actor_count: int) -> dict[str
 
 
 def load_best_grasp(output_dir: str | Path) -> GraspRecord:
+    return load_grasp_candidates(output_dir, top_k=1)[0]
+
+
+def load_grasp_candidates(output_dir: str | Path, top_k: int | None = None) -> list[GraspRecord]:
     root = Path(output_dir).expanduser().resolve()
+    limit = None if top_k is None else max(1, int(top_k))
+    topk_path = root / "recommended_grasps_topk.json"
+    if topk_path.is_file():
+        payload = json.loads(topk_path.read_text(encoding="utf-8"))
+        items = payload.get("grasps", payload) if isinstance(payload, dict) else payload
+        if not isinstance(items, list):
+            raise ValueError(f"{topk_path} must contain a list or a dict with a 'grasps' list.")
+        records = [
+            grasp_record_from_json(item, source=f"{topk_path}#{index}")
+            for index, item in enumerate(items)
+        ]
+        records.sort(key=lambda record: record.score, reverse=True)
+        if limit is not None:
+            records = records[:limit]
+        if records:
+            return records
+
+    grasp_files = sorted((root / "raw_outputs").glob("*.grasp.npy")) or sorted(root.glob("*.grasp.npy"))
+    if limit is None or limit > 1:
+        raw_records = load_raw_grasp_candidates(grasp_files)
+        if raw_records:
+            return raw_records[:limit] if limit is not None else raw_records
+
     json_path = root / "recommended_grasp_top1.json"
     if json_path.is_file():
         data = json.loads(json_path.read_text(encoding="utf-8"))
-        return GraspRecord(
-            score=float(required(data, "score", json_path)),
-            width_m=float(required(data, "width_m", json_path)),
-            height_m=float(required(data, "height_m", json_path)),
-            depth_m=float(required(data, "depth_m", json_path)),
-            rotation_matrix_camera=np.asarray(required(data, "rotation_matrix_camera", json_path), dtype=np.float64).reshape(3, 3),
-            translation_m_camera=np.asarray(required(data, "translation_m_camera", json_path), dtype=np.float64).reshape(3),
-            source=str(json_path),
-            object_index=optional_int(data.get("object_index")),
-            object_id=optional_int(data.get("object_id")),
-        )
+        return [grasp_record_from_json(data, source=str(json_path))]
 
-    grasp_files = sorted((root / "raw_outputs").glob("*.grasp.npy")) or sorted(root.glob("*.grasp.npy"))
     if not grasp_files:
         raise FileNotFoundError(
             f"No ZeroGrasp grasp output found under {root}. Expected recommended_grasp_top1.json "
             "or raw_outputs/*.grasp.npy."
         )
-    best: GraspRecord | None = None
+    raw_records = load_raw_grasp_candidates(grasp_files)
+    if not raw_records:
+        raise ValueError(f"All grasp arrays under {root} are empty.")
+    return raw_records[:limit] if limit is not None else raw_records
+
+
+def load_raw_grasp_candidates(grasp_files: list[Path]) -> list[GraspRecord]:
+    records: list[GraspRecord] = []
     for path in grasp_files:
         arr = np.asarray(np.load(path), dtype=np.float64)
         if arr.size == 0:
             continue
         if arr.ndim == 1:
             arr = arr.reshape(1, -1)
-        row = arr[int(np.argmax(arr[:, 0]))]
-        record = GraspRecord(
-            score=float(row[0]),
-            width_m=float(row[1]),
-            height_m=float(row[2]),
-            depth_m=float(row[3]),
-            rotation_matrix_camera=row[4:13].reshape(3, 3),
-            translation_m_camera=row[13:16].reshape(3),
-            source=str(path),
-            object_index=None,
-            object_id=optional_int(row[16]) if row.shape[0] > 16 else None,
-        )
-        if best is None or record.score > best.score:
-            best = record
-    if best is None:
-        raise ValueError(f"All grasp arrays under {root} are empty.")
-    return best
+        for row_index, row in enumerate(arr):
+            records.append(
+                GraspRecord(
+                    score=float(row[0]),
+                    width_m=float(row[1]),
+                    height_m=float(row[2]),
+                    depth_m=float(row[3]),
+                    rotation_matrix_camera=row[4:13].reshape(3, 3),
+                    translation_m_camera=row[13:16].reshape(3),
+                    source=f"{path}#{row_index}",
+                    object_index=None,
+                    object_id=optional_int(row[16]) if row.shape[0] > 16 else None,
+                )
+            )
+    records.sort(key=lambda record: record.score, reverse=True)
+    return records
+
+
+def grasp_record_from_json(data: dict[str, Any], *, source: str) -> GraspRecord:
+    return GraspRecord(
+        score=float(required(data, "score", source)),
+        width_m=float(required(data, "width_m", source)),
+        height_m=float(required(data, "height_m", source)),
+        depth_m=float(required(data, "depth_m", source)),
+        rotation_matrix_camera=np.asarray(
+            required(data, "rotation_matrix_camera", source),
+            dtype=np.float64,
+        ).reshape(3, 3),
+        translation_m_camera=np.asarray(
+            required(data, "translation_m_camera", source),
+            dtype=np.float64,
+        ).reshape(3),
+        source=str(data.get("source_file") or source),
+        object_index=optional_int(data.get("object_index")),
+        object_id=optional_int(data.get("object_id")),
+    )
 
 
 def compute_grasp_control_pose(

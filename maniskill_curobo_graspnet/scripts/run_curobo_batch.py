@@ -37,6 +37,15 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--approach-axis", default="positive-x")
     parser.add_argument("--depth-scale", type=float, default=1.0)
     parser.add_argument("--grasp-depth-max-offset", type=float, default=0.04)
+    parser.add_argument(
+        "--candidate-top-k",
+        type=int,
+        default=20,
+        help=(
+            "Try this many GraspNet-ranked candidates and execute the first "
+            "candidate whose pre-grasp and grasp stages are both plannable."
+        ),
+    )
     parser.add_argument("--depth-auto-fallback", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--pregrasp-offset", type=float, default=0.10)
     parser.add_argument("--lift-offset", type=float, default=0.15)

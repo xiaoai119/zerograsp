@@ -55,7 +55,31 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--approach-axis", default="positive-x")
     parser.add_argument("--baseline-depth-scale", type=float, default=0.0)
     parser.add_argument("--depth-scale", type=float, default=1.0)
+    parser.add_argument(
+        "--include-corrected-depth",
+        action="store_true",
+        help=(
+            "Also run a corrected_depth treatment: start from "
+            "--corrected-depth-scale and progressively fall back to shallower "
+            "depth scales during top-K executability selection."
+        ),
+    )
+    parser.add_argument(
+        "--corrected-depth-scale",
+        type=float,
+        default=None,
+        help="Requested depth scale for corrected_depth. Defaults to --depth-scale.",
+    )
     parser.add_argument("--grasp-depth-max-offset", type=float, default=0.04)
+    parser.add_argument(
+        "--candidate-top-k",
+        type=int,
+        default=20,
+        help=(
+            "For each ZeroGrasp output, try this many model-ranked grasp "
+            "candidates and execute the first pre/grasp-plannable candidate."
+        ),
+    )
     parser.add_argument(
         "--depth-auto-fallback",
         action="store_true",
@@ -225,12 +249,16 @@ def main(argv: Iterable[str] | None = None) -> int:
             )
             comparison = record.get("comparison")
             if comparison:
-                print(
-                    f"  baseline={comparison['baseline_outcome']} "
-                    f"depth={comparison['depth_outcome']} "
-                    f"change={comparison['change']}",
-                    flush=True,
+                variant_text = " ".join(
+                    f"{label}={variant.get('outcome')}"
+                    for label, variant in (record.get("variants") or {}).items()
                 )
+                comparisons = record.get("comparisons") or {}
+                change_text = " ".join(
+                    f"{label}_change={value.get('change')}"
+                    for label, value in comparisons.items()
+                )
+                print(f"  {variant_text} {change_text}", flush=True)
             else:
                 print(f"  status={record['status']}", flush=True)
     finally:
@@ -273,7 +301,7 @@ def run_seed(
     setup_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    source_base = candidate_root / f"seed{seed:03d}_base" if candidate_root else setup_dir
+    source_base = reused_source_base(candidate_root, seed) if candidate_root else setup_dir
     input_dir = source_base / "zg_input"
     zg_output_dir = source_base / "zg_output"
     candidate_path = zg_output_dir / "recommended_grasp_top1.json"
@@ -336,10 +364,9 @@ def run_seed(
 
     candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
     variants = {}
-    for label, scale in (
-        ("baseline", float(args.baseline_depth_scale)),
-        ("depth", float(args.depth_scale)),
-    ):
+    for spec in variant_specs(args):
+        label = spec["label"]
+        scale = float(spec["scale"])
         run_dir = seed_dir / label
         if args.reuse_existing and variant_is_complete(
             existing,
@@ -355,9 +382,7 @@ def run_seed(
             zg_output_dir=zg_output_dir,
             run_dir=run_dir,
             depth_scale=scale,
-            depth_auto_fallback=bool(
-                args.depth_auto_fallback and label == "depth"
-            ),
+            depth_auto_fallback=bool(spec["depth_auto_fallback"]),
         )
         if execute_runner is None:
             result = run_command(
@@ -387,7 +412,55 @@ def run_seed(
         },
         "variants": variants,
         "comparison": compare_variants(variants["baseline"], variants["depth"]),
+        "comparisons": {
+            label: compare_variants(variants["baseline"], variant)
+            for label, variant in variants.items()
+            if label != "baseline"
+        },
     }
+
+
+def variant_specs(args: argparse.Namespace) -> list[dict[str, Any]]:
+    specs = [
+        {
+            "label": "baseline",
+            "scale": float(args.baseline_depth_scale),
+            "depth_auto_fallback": False,
+        },
+        {
+            "label": "depth",
+            "scale": float(args.depth_scale),
+            "depth_auto_fallback": bool(args.depth_auto_fallback),
+        },
+    ]
+    if args.include_corrected_depth:
+        corrected_scale = (
+            float(args.corrected_depth_scale)
+            if args.corrected_depth_scale is not None
+            else float(args.depth_scale)
+        )
+        specs.append(
+            {
+                "label": "corrected_depth",
+                "scale": corrected_scale,
+                "depth_auto_fallback": True,
+            }
+        )
+    return specs
+
+
+def reused_source_base(candidate_root: Path | None, seed: int) -> Path:
+    if candidate_root is None:
+        raise ValueError("candidate_root is required.")
+    candidates = [
+        candidate_root / f"seed{seed:03d}_base",
+        candidate_root / f"seed{seed:03d}" / "setup",
+        candidate_root / f"seed{seed:03d}",
+    ]
+    for path in candidates:
+        if (path / "zg_output" / "recommended_grasp_top1.json").is_file():
+            return path
+    return candidates[0]
 
 
 def validate_persistent_worker_args(args: argparse.Namespace) -> None:
@@ -1008,6 +1081,8 @@ def execute_command(
         str(depth_scale),
         "--grasp-depth-max-offset",
         str(args.grasp_depth_max_offset),
+        "--candidate-top-k",
+        str(args.candidate_top_k),
         "--close-steps",
         str(args.close_steps),
         "--settle-steps",
@@ -1176,12 +1251,16 @@ def variant_is_complete(
         return False
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     grasp = manifest.get("grasp") or {}
-    fallback = grasp.get("grasp_depth_auto_fallback") or {}
-    configured = (
-        fallback.get("requested_scale")
-        if fallback.get("enabled")
-        else (grasp.get("grasp_depth_offset") or {}).get("scale")
-    )
+    selection = grasp.get("candidate_selection") or {}
+    if selection.get("enabled") and selection.get("requested_depth_scale") is not None:
+        configured = selection.get("requested_depth_scale")
+    else:
+        fallback = grasp.get("grasp_depth_auto_fallback") or {}
+        configured = (
+            fallback.get("requested_scale")
+            if fallback.get("enabled")
+            else (grasp.get("grasp_depth_offset") or {}).get("scale")
+        )
     return configured is not None and abs(float(configured) - float(scale)) < 1e-9
 
 
@@ -1225,6 +1304,23 @@ def write_results(
         "regressed": sum(record["comparison"]["change"] == "regressed" for record in complete),
         "both_success": sum(record["comparison"]["change"] == "both_success" for record in complete),
         "both_failed": sum(record["comparison"]["change"] == "both_failed" for record in complete),
+        "variant_successes": {
+            spec["label"]: sum(
+                bool(record["variants"][spec["label"]].get("object_lift_success"))
+                for record in complete
+                if spec["label"] in record.get("variants", {})
+            )
+            for spec in variant_specs(args)
+        },
+        "variant_outcomes": {
+            spec["label"]: outcome_counts_for_variant(complete, spec["label"])
+            for spec in variant_specs(args)
+        },
+        "comparison_by_variant": {
+            spec["label"]: comparison_counts_for_variant(complete, spec["label"])
+            for spec in variant_specs(args)
+            if spec["label"] != "baseline"
+        },
     }
     payload = {
         "env_id": args.env_id,
@@ -1232,7 +1328,14 @@ def write_results(
         "seed_end": args.seed_end,
         "baseline_depth_scale": args.baseline_depth_scale,
         "depth_scale": args.depth_scale,
+        "include_corrected_depth": bool(args.include_corrected_depth),
+        "corrected_depth_scale": (
+            args.corrected_depth_scale
+            if args.corrected_depth_scale is not None
+            else args.depth_scale
+        ),
         "grasp_depth_max_offset": args.grasp_depth_max_offset,
+        "candidate_top_k": int(args.candidate_top_k),
         "depth_auto_fallback": bool(args.depth_auto_fallback),
         "persistent_worker": bool(args.persistent_worker),
         "persistent_zerograsp_worker_requested": bool(
@@ -1271,6 +1374,37 @@ def write_results(
         },
     )
     return payload
+
+
+def outcome_counts_for_variant(
+    complete_records: list[dict[str, Any]],
+    label: str,
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for record in complete_records:
+        variant = (record.get("variants") or {}).get(label)
+        if not variant:
+            continue
+        outcome = str(variant.get("outcome"))
+        counts[outcome] = counts.get(outcome, 0) + 1
+    return counts
+
+
+def comparison_counts_for_variant(
+    complete_records: list[dict[str, Any]],
+    label: str,
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for record in complete_records:
+        comparisons = record.get("comparisons") or {}
+        comparison = comparisons.get(label)
+        if comparison is None and label == "depth":
+            comparison = record.get("comparison")
+        if not comparison:
+            continue
+        change = str(comparison.get("change"))
+        counts[change] = counts.get(change, 0) + 1
+    return counts
 
 
 def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
