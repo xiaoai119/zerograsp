@@ -181,3 +181,6 @@ python -m maniskill_codex.run_full_pipeline \
 - 分数、宽度、深度等信息
 
 如果你后续有相机外参，再把它转换到世界坐标系即可。
+
+## 模型参数下载链接
+https://my.feishu.cn/file/Dd7VbHMOtotgUqxSX13cjX6NnPd?from=from_copylink
