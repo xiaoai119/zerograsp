@@ -84,6 +84,9 @@ maniskill_curobo/logs/
 maniskill_curobo/smoke_tests/
 maniskill_curobo/datasets/
 
+# Real-world collision model experiments
+maniskill_curobo_real/runs/
+
 # GraspNet baseline integration generated artifacts and local dependencies
 maniskill_curobo_graspnet/checkpoints/
 maniskill_curobo_graspnet/envs/
