@@ -307,6 +307,8 @@ def visualize_oracle_instances(
     camera_matrix: np.ndarray,
     camera_model_matrix: np.ndarray,
     world_from_base_matrix: np.ndarray,
+    title: str = "Oracle: ManiSkill instance point clouds",
+    overlay_title: str = "Oracle instances projected on ZeroGrasp RGB",
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_ids = {int(record["segmentation_id"]) for record in target_records if "segmentation_id" in record}
@@ -348,8 +350,20 @@ def visualize_oracle_instances(
     write_colored_ply(output_dir / "points_by_instance.ply", point_sets, max_points=max_points)
     write_cuboids_obj(output_dir / "instance_cuboids.obj", cuboids)
     write_cuboids_json(output_dir / "instance_cuboids.json", cuboids, extra={"instances": instance_records})
-    plot_top_view(output_dir / "top_view.png", point_sets, cuboids, title="Oracle: ManiSkill instance point clouds", max_points=max_points)
-    plot_3d_view(output_dir / "view_3d.png", point_sets, cuboids, title="Oracle: ManiSkill instance point clouds", max_points=max_points)
+    plot_top_view(
+        output_dir / "top_view.png",
+        point_sets,
+        cuboids,
+        title=title,
+        max_points=max_points,
+    )
+    plot_3d_view(
+        output_dir / "view_3d.png",
+        point_sets,
+        cuboids,
+        title=title,
+        max_points=max_points,
+    )
     plot_camera_overlay(
         output_dir / "camera_overlay.png",
         rgb,
@@ -358,7 +372,7 @@ def visualize_oracle_instances(
         camera_matrix=camera_matrix,
         camera_model_matrix=camera_model_matrix,
         world_from_base_matrix=world_from_base_matrix,
-        title="Oracle instances projected on ZeroGrasp RGB",
+        title=overlay_title,
         max_points=max_points,
     )
     return {

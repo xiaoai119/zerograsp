@@ -332,6 +332,67 @@ def build_oracle_instance_cuboid_scene(
     return SceneBuildResult(scene=scene, metadata=metadata)
 
 
+def build_zerograsp_instance_cuboid_scene(
+    *,
+    instances: list[Any],
+    workspace_bounds: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] = DEFAULT_WORKSPACE_BOUNDS,
+    table_top_z: float = DEFAULT_TABLE_TOP_Z,
+    min_instance_points: int = 400,
+    instance_padding: float = 0.0,
+    min_cuboid_dimension: float = 0.01,
+    max_obstacles: int = 50,
+) -> SceneBuildResult:
+    """Build M3 AABBs from ZeroGrasp reconstructed per-instance surfaces."""
+
+    context = _zerograsp_instance_context(
+        instances=instances,
+        workspace_bounds=workspace_bounds,
+        table_top_z=table_top_z,
+        min_instance_points=min_instance_points,
+        max_obstacles=max_obstacles,
+    )
+    table = build_static_table_scene(
+        table_top_z=context["table_top_z"],
+        source="m3_zerograsp_reconstruction_cuboids",
+    )
+    cuboids = dict(table.scene["cuboid"])
+    obstacle_records: list[dict[str, Any]] = []
+    for index, (label, record, points) in enumerate(context["candidates"]):
+        obstacle = points_to_aabb_cuboid(
+            points,
+            padding=float(instance_padding),
+            min_dimension=float(min_cuboid_dimension),
+        )
+        if obstacle is None:
+            continue
+        actor_name = str(record["actor_name"])
+        name = f"zerograsp_obstacle_{index:02d}_{_safe_name(actor_name)}"
+        cuboids[name] = obstacle
+        obstacle_records.append(
+            {
+                "name": name,
+                "label": int(label),
+                "segmentation_id": record.get("segmentation_id"),
+                "actor_name": actor_name,
+                "points": int(points.shape[0]),
+                "dims": obstacle["dims"],
+                "pose": obstacle["pose"],
+            }
+        )
+    metadata = _zerograsp_scene_metadata(
+        context=context,
+        table_metadata=table.metadata,
+        source="m3_zerograsp_reconstruction_cuboids",
+        obstacle_records=obstacle_records,
+        extra={
+            "instance_padding": float(instance_padding),
+            "min_cuboid_dimension": float(min_cuboid_dimension),
+            "geometry_type": "aabb",
+        },
+    )
+    return SceneBuildResult(scene={"cuboid": cuboids}, metadata=metadata)
+
+
 def build_oracle_instance_obb_scene(
     *,
     depth_m: np.ndarray,
@@ -399,6 +460,68 @@ def build_oracle_instance_obb_scene(
         context=context,
         table_metadata=table.metadata,
         source="m4a_oracle_instance_yaw_obb",
+        obstacle_records=obstacle_records,
+        extra={
+            "instance_padding": float(instance_padding),
+            "min_cuboid_dimension": float(min_cuboid_dimension),
+            "geometry_type": "yaw_obb",
+        },
+    )
+    return SceneBuildResult(scene={"cuboid": cuboids}, metadata=metadata)
+
+
+def build_zerograsp_instance_obb_scene(
+    *,
+    instances: list[Any],
+    workspace_bounds: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] = DEFAULT_WORKSPACE_BOUNDS,
+    table_top_z: float = DEFAULT_TABLE_TOP_Z,
+    min_instance_points: int = 400,
+    instance_padding: float = 0.0,
+    min_cuboid_dimension: float = 0.01,
+    max_obstacles: int = 50,
+) -> SceneBuildResult:
+    """Build M4-A yaw OBBs from ZeroGrasp reconstructed surfaces."""
+
+    context = _zerograsp_instance_context(
+        instances=instances,
+        workspace_bounds=workspace_bounds,
+        table_top_z=table_top_z,
+        min_instance_points=min_instance_points,
+        max_obstacles=max_obstacles,
+    )
+    table = build_static_table_scene(
+        table_top_z=context["table_top_z"],
+        source="m4a_zerograsp_reconstruction_yaw_obb",
+    )
+    cuboids = dict(table.scene["cuboid"])
+    obstacle_records: list[dict[str, Any]] = []
+    for index, (label, record, points) in enumerate(context["candidates"]):
+        obstacle = points_to_yaw_obb_cuboid(
+            points,
+            padding=float(instance_padding),
+            min_dimension=float(min_cuboid_dimension),
+        )
+        if obstacle is None:
+            continue
+        actor_name = str(record["actor_name"])
+        name = f"zerograsp_obb_{index:02d}_{_safe_name(actor_name)}"
+        cuboids[name] = {"dims": obstacle["dims"], "pose": obstacle["pose"]}
+        obstacle_records.append(
+            {
+                "name": name,
+                "label": int(label),
+                "segmentation_id": record.get("segmentation_id"),
+                "actor_name": actor_name,
+                "points": int(points.shape[0]),
+                "dims": obstacle["dims"],
+                "pose": obstacle["pose"],
+                "yaw_rad": obstacle["yaw_rad"],
+            }
+        )
+    metadata = _zerograsp_scene_metadata(
+        context=context,
+        table_metadata=table.metadata,
+        source="m4a_zerograsp_reconstruction_yaw_obb",
         obstacle_records=obstacle_records,
         extra={
             "instance_padding": float(instance_padding),
@@ -502,6 +625,99 @@ def build_oracle_instance_mesh_scene(
         context=context,
         table_metadata=table.metadata,
         source="m4b_oracle_instance_convex_mesh",
+        obstacle_records=obstacle_records,
+        extra={
+            "geometry_type": "convex_hull_mesh",
+            "n_mesh_obstacles": len(meshes),
+            "n_obb_fallbacks": fallback_count,
+            "max_points_per_instance": int(max_points_per_instance),
+        },
+    )
+    return SceneBuildResult(scene=scene, metadata=metadata)
+
+
+def build_zerograsp_instance_mesh_scene(
+    *,
+    instances: list[Any],
+    workspace_bounds: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] = DEFAULT_WORKSPACE_BOUNDS,
+    table_top_z: float = DEFAULT_TABLE_TOP_Z,
+    min_instance_points: int = 400,
+    max_obstacles: int = 50,
+    max_points_per_instance: int = 2500,
+    fallback_padding: float = 0.0,
+    min_cuboid_dimension: float = 0.01,
+) -> SceneBuildResult:
+    """Build M4-B convex meshes from ZeroGrasp reconstructed surfaces."""
+
+    context = _zerograsp_instance_context(
+        instances=instances,
+        workspace_bounds=workspace_bounds,
+        table_top_z=table_top_z,
+        min_instance_points=min_instance_points,
+        max_obstacles=max_obstacles,
+    )
+    table = build_static_table_scene(
+        table_top_z=context["table_top_z"],
+        source="m4b_zerograsp_reconstruction_convex_mesh",
+    )
+    cuboids = dict(table.scene["cuboid"])
+    meshes: dict[str, Any] = {}
+    obstacle_records: list[dict[str, Any]] = []
+    fallback_count = 0
+    for index, (label, record, points) in enumerate(context["candidates"]):
+        actor_name = str(record["actor_name"])
+        name = f"zerograsp_mesh_{index:02d}_{_safe_name(actor_name)}"
+        mesh = points_to_convex_hull_mesh(
+            points,
+            max_points=int(max_points_per_instance),
+        )
+        if mesh is None:
+            obstacle = points_to_yaw_obb_cuboid(
+                points,
+                padding=float(fallback_padding),
+                min_dimension=float(min_cuboid_dimension),
+            )
+            if obstacle is None:
+                continue
+            fallback_name = f"{name}_obb_fallback"
+            cuboids[fallback_name] = {
+                "dims": obstacle["dims"],
+                "pose": obstacle["pose"],
+            }
+            fallback_count += 1
+            obstacle_records.append(
+                {
+                    "name": fallback_name,
+                    "label": int(label),
+                    "segmentation_id": record.get("segmentation_id"),
+                    "actor_name": actor_name,
+                    "points": int(points.shape[0]),
+                    "geometry_type": "yaw_obb_fallback",
+                    "dims": obstacle["dims"],
+                    "pose": obstacle["pose"],
+                }
+            )
+            continue
+        meshes[name] = mesh
+        obstacle_records.append(
+            {
+                "name": name,
+                "label": int(label),
+                "segmentation_id": record.get("segmentation_id"),
+                "actor_name": actor_name,
+                "points": int(points.shape[0]),
+                "geometry_type": "convex_hull_mesh",
+                "vertices": len(mesh["vertices"]),
+                "triangles": len(mesh["faces"]) // 3,
+            }
+        )
+    scene: dict[str, Any] = {"cuboid": cuboids}
+    if meshes:
+        scene["mesh"] = meshes
+    metadata = _zerograsp_scene_metadata(
+        context=context,
+        table_metadata=table.metadata,
+        source="m4b_zerograsp_reconstruction_convex_mesh",
         obstacle_records=obstacle_records,
         extra={
             "geometry_type": "convex_hull_mesh",
@@ -622,6 +838,105 @@ def build_oracle_instance_voxel_esdf_scene(
         voxel_dims=dims,
         voxel_size=voxel_size,
         feature_tensor=sdf,
+        metadata=metadata,
+    )
+
+
+def build_zerograsp_instance_voxel_esdf_scene(
+    *,
+    instances: list[Any],
+    workspace_bounds: tuple[tuple[float, float], tuple[float, float], tuple[float, float]] = DEFAULT_WORKSPACE_BOUNDS,
+    table_top_z: float = DEFAULT_TABLE_TOP_Z,
+    min_instance_points: int = 400,
+    max_obstacles: int = 50,
+    max_points_per_instance: int = 1500,
+    voxel_size: float = 0.01,
+    dilation_voxels: int = 0,
+) -> VoxelSceneBuildResult:
+    """Build M4-C ESDF from ZeroGrasp reconstructed surfaces."""
+
+    from scipy.ndimage import binary_dilation, distance_transform_edt
+
+    context = _zerograsp_instance_context(
+        instances=instances,
+        workspace_bounds=workspace_bounds,
+        table_top_z=table_top_z,
+        min_instance_points=min_instance_points,
+        max_obstacles=max_obstacles,
+    )
+    table = build_static_table_scene(
+        table_top_z=context["table_top_z"],
+        source="m4c_zerograsp_reconstruction_voxel_esdf",
+    )
+    voxel_size = float(voxel_size)
+    if voxel_size <= 0.0:
+        raise ValueError("voxel_size must be positive.")
+    bounds = np.asarray(workspace_bounds, dtype=np.float64)
+    counts = np.ceil((bounds[:, 1] - bounds[:, 0]) / voxel_size).astype(np.int64)
+    dims = counts.astype(np.float64) * voxel_size
+    center = 0.5 * (bounds[:, 0] + bounds[:, 1])
+    axes = [
+        center[axis]
+        + (np.arange(counts[axis], dtype=np.float64) - (counts[axis] - 1) / 2.0)
+        * voxel_size
+        for axis in range(3)
+    ]
+    occupied = np.zeros(tuple(int(value) for value in counts), dtype=bool)
+    obstacle_records: list[dict[str, Any]] = []
+    fallback_count = 0
+    for index, (label, record, points) in enumerate(context["candidates"]):
+        sampled = deterministic_downsample(points, int(max_points_per_instance))
+        filled, used_fallback = _voxelize_closed_instance(
+            occupied=occupied,
+            axes=axes,
+            points=sampled,
+            voxel_size=voxel_size,
+        )
+        if filled == 0:
+            continue
+        fallback_count += int(used_fallback)
+        actor_name = str(record["actor_name"])
+        obstacle_records.append(
+            {
+                "name": f"zerograsp_voxel_{index:02d}_{_safe_name(actor_name)}",
+                "label": int(label),
+                "segmentation_id": record.get("segmentation_id"),
+                "actor_name": actor_name,
+                "points": int(points.shape[0]),
+                "occupied_voxels_added": int(filled),
+                "voxelization": "yaw_obb_fallback" if used_fallback else "convex_hull",
+            }
+        )
+    if int(dilation_voxels) > 0:
+        occupied = binary_dilation(occupied, iterations=int(dilation_voxels))
+    outside = distance_transform_edt(~occupied, sampling=voxel_size)
+    inside = distance_transform_edt(occupied, sampling=voxel_size)
+    sdf = outside.astype(np.float32)
+    sdf[occupied] = -inside[occupied].astype(np.float32)
+    metadata = _zerograsp_scene_metadata(
+        context=context,
+        table_metadata=table.metadata,
+        source="m4c_zerograsp_reconstruction_voxel_esdf",
+        obstacle_records=obstacle_records,
+        extra={
+            "geometry_type": "voxel_esdf",
+            "voxel_size": voxel_size,
+            "voxel_dims": _round_list(dims),
+            "voxel_center": _round_list(center),
+            "voxel_shape": [int(value) for value in counts],
+            "occupied_voxels": int(np.count_nonzero(occupied)),
+            "occupied_fraction": float(np.mean(occupied)),
+            "dilation_voxels": int(dilation_voxels),
+            "n_voxel_fallbacks": fallback_count,
+            "max_points_per_instance": int(max_points_per_instance),
+        },
+    )
+    return VoxelSceneBuildResult(
+        table_scene=table.scene,
+        voxel_center=center,
+        voxel_dims=dims,
+        voxel_size=voxel_size,
+        feature_tensor=sdf.astype(np.float16),
         metadata=metadata,
     )
 
@@ -1007,6 +1322,108 @@ def _oracle_scene_metadata(
             "target_exclusion_applied": True,
             "uses_actor_collision_truth": False,
             "uses_oracle_segmentation_truth": True,
+        }
+    )
+    metadata.update(extra)
+    return metadata
+
+
+def _zerograsp_instance_context(
+    *,
+    instances: list[Any],
+    workspace_bounds: tuple[tuple[float, float], tuple[float, float], tuple[float, float]],
+    table_top_z: float,
+    min_instance_points: int,
+    max_obstacles: int,
+) -> dict[str, Any]:
+    bounds = np.asarray(workspace_bounds, dtype=np.float64)
+    candidates: list[tuple[int, dict[str, Any], np.ndarray]] = []
+    skipped_records: list[dict[str, Any]] = []
+    instance_records: list[dict[str, Any]] = []
+    valid_points = 0
+    target_points = 0
+    non_target_points = 0
+    for instance in instances:
+        label = int(getattr(instance, "label"))
+        points = np.asarray(getattr(instance, "points_base"), dtype=np.float64).reshape(-1, 3)
+        finite = np.isfinite(points).all(axis=1)
+        in_workspace = (
+            finite
+            & (points[:, 0] >= bounds[0, 0])
+            & (points[:, 0] <= bounds[0, 1])
+            & (points[:, 1] >= bounds[1, 0])
+            & (points[:, 1] <= bounds[1, 1])
+            & (points[:, 2] >= bounds[2, 0])
+            & (points[:, 2] <= bounds[2, 1])
+        )
+        points = points[in_workspace]
+        record = {
+            "label": label,
+            "segmentation_id": getattr(instance, "segmentation_id", None),
+            "actor_name": str(getattr(instance, "actor_name", f"label_{label}")),
+            "is_task_target": bool(getattr(instance, "is_task_target", False)),
+            "reconstruction_file": str(
+                getattr(instance, "reconstruction_file", "")
+            ),
+            "points": int(points.shape[0]),
+        }
+        instance_records.append(record)
+        valid_points += int(points.shape[0])
+        if record["is_task_target"]:
+            target_points += int(points.shape[0])
+            reason = "target_excluded"
+        else:
+            non_target_points += int(points.shape[0])
+            if points.shape[0] >= int(min_instance_points):
+                candidates.append((label, record, points))
+                continue
+            reason = "too_few_points"
+        skipped_records.append({**record, "reason": reason})
+    candidates.sort(key=lambda item: item[2].shape[0], reverse=True)
+    return {
+        "table_top_z": float(table_top_z),
+        "instances": instance_records,
+        "candidates": candidates[: int(max_obstacles)],
+        "skipped_records": skipped_records,
+        "valid_points": int(valid_points),
+        "target_points": int(target_points),
+        "non_target_points": int(non_target_points),
+        "workspace_bounds": workspace_bounds,
+        "min_instance_points": int(min_instance_points),
+        "max_obstacles": int(max_obstacles),
+    }
+
+
+def _zerograsp_scene_metadata(
+    *,
+    context: dict[str, Any],
+    table_metadata: dict[str, Any],
+    source: str,
+    obstacle_records: list[dict[str, Any]],
+    extra: dict[str, Any],
+) -> dict[str, Any]:
+    metadata = dict(table_metadata)
+    metadata.update(
+        {
+            "source": source,
+            "point_cloud_source": "zerograsp_reconstruction",
+            "valid_points": int(context["valid_points"]),
+            "target_points": int(context["target_points"]),
+            "non_target_points": int(context["non_target_points"]),
+            "n_object_records": len(context["instances"]),
+            "n_pointcloud_obstacles": len(obstacle_records),
+            "n_obstacles": 1 + len(obstacle_records),
+            "min_instance_points": int(context["min_instance_points"]),
+            "max_obstacles": int(context["max_obstacles"]),
+            "obstacle_records": obstacle_records,
+            "skipped_instance_records": context["skipped_records"],
+            "reconstructed_instance_records": context["instances"],
+            "workspace_bounds": context["workspace_bounds"],
+            "target_exclusion_applied": True,
+            "uses_actor_collision_truth": False,
+            "uses_oracle_segmentation_truth": True,
+            "uses_maniskill_depth_geometry": False,
+            "uses_zerograsp_reconstruction": True,
         }
     )
     metadata.update(extra)

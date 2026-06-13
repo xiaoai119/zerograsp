@@ -1,0 +1,141 @@
+{
+  "fit_type": "morphit",
+  "iterations": 100,
+  "radius_padding": 0.003,
+  "links": {
+    "left_link11": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link11.STL",
+      "requested_spheres": 3,
+      "generated_spheres": 1,
+      "fit_time_s": 0.0,
+      "manual_override": true,
+      "fit_metrics_before_padding": null
+    },
+    "left_link12": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link12.STL",
+      "requested_spheres": 6,
+      "generated_spheres": 4,
+      "fit_time_s": 3.346680164337158,
+      "manual_override": false,
+      "fit_metrics_before_padding": {
+        "num_spheres": 4,
+        "coverage": 0.9290359616279602,
+        "protrusion": 0.9312499761581421,
+        "protrusion_dist_mean": 0.00846887193620205,
+        "protrusion_dist_p95": 0.01601804792881012,
+        "surface_gap_mean": 0.00039445076254196465,
+        "surface_gap_p95": 0.0033518944401293993,
+        "max_uncovered_gap": 0.0092078298330307,
+        "volume_ratio": 1.1021478581244477
+      }
+    },
+    "left_link13": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link13.STL",
+      "requested_spheres": 6,
+      "generated_spheres": 5,
+      "fit_time_s": 1.3697357177734375,
+      "manual_override": false,
+      "fit_metrics_before_padding": {
+        "num_spheres": 5,
+        "coverage": 0.9003154635429382,
+        "protrusion": 0.9360000491142273,
+        "protrusion_dist_mean": 0.013517850078642368,
+        "protrusion_dist_p95": 0.03331507369875908,
+        "surface_gap_mean": 0.0005950659979134798,
+        "surface_gap_p95": 0.004948329646140337,
+        "max_uncovered_gap": 0.012496260926127434,
+        "volume_ratio": 0.7602370407615805
+      }
+    },
+    "left_link14": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link14.STL",
+      "requested_spheres": 3,
+      "generated_spheres": 2,
+      "fit_time_s": 1.2255454063415527,
+      "manual_override": false,
+      "fit_metrics_before_padding": {
+        "num_spheres": 2,
+        "coverage": 0.9785999655723572,
+        "protrusion": 0.7699999809265137,
+        "protrusion_dist_mean": 0.007026220206171274,
+        "protrusion_dist_p95": 0.014049478806555271,
+        "surface_gap_mean": 0.0002827454009093344,
+        "surface_gap_p95": 0.002400943310931325,
+        "max_uncovered_gap": 0.005890782922506332,
+        "volume_ratio": 1.5738371644225482
+      }
+    },
+    "left_link15": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link15.STL",
+      "requested_spheres": 3,
+      "generated_spheres": 3,
+      "fit_time_s": 1.195312261581421,
+      "manual_override": false,
+      "fit_metrics_before_padding": {
+        "num_spheres": 3,
+        "coverage": 0.9565415978431702,
+        "protrusion": 0.6616666913032532,
+        "protrusion_dist_mean": 0.004714812617748976,
+        "protrusion_dist_p95": 0.01299678161740303,
+        "surface_gap_mean": 0.0002989749191328883,
+        "surface_gap_p95": 0.0024405578151345253,
+        "max_uncovered_gap": 0.00861680880188942,
+        "volume_ratio": 2.228053485086909
+      }
+    },
+    "left_link16": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link16.STL",
+      "requested_spheres": 4,
+      "generated_spheres": 4,
+      "fit_time_s": 1.1087257862091064,
+      "manual_override": false,
+      "fit_metrics_before_padding": {
+        "num_spheres": 4,
+        "coverage": 0.9219154715538025,
+        "protrusion": 0.6812499761581421,
+        "protrusion_dist_mean": 0.00789041630923748,
+        "protrusion_dist_p95": 0.018919188529253006,
+        "surface_gap_mean": 0.00021378337987698615,
+        "surface_gap_p95": 0.0015489398501813412,
+        "max_uncovered_gap": 0.008903175592422485,
+        "volume_ratio": 4.2303632755884655
+      }
+    },
+    "left_link17": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link17.STL",
+      "requested_spheres": 3,
+      "generated_spheres": 3,
+      "fit_time_s": 1.1613430976867676,
+      "manual_override": false,
+      "fit_metrics_before_padding": {
+        "num_spheres": 3,
+        "coverage": 0.9689431190490723,
+        "protrusion": 0.5616666674613953,
+        "protrusion_dist_mean": 0.0077589391730725765,
+        "protrusion_dist_p95": 0.021260948851704597,
+        "surface_gap_mean": 0.0003418591513764113,
+        "surface_gap_p95": 0.002618003636598587,
+        "max_uncovered_gap": 0.011251512914896011,
+        "volume_ratio": 2.0859980838481706
+      }
+    },
+    "left_link18": {
+      "mesh": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link18.STL",
+      "requested_spheres": 3,
+      "generated_spheres": 3,
+      "fit_time_s": 1.1527557373046875,
+      "manual_override": false,
+      "fit_metrics_before_padding": {
+        "num_spheres": 3,
+        "coverage": 0.9808645248413086,
+        "protrusion": 0.47833335399627686,
+        "protrusion_dist_mean": 0.00970088317990303,
+        "protrusion_dist_p95": 0.022237753495573997,
+        "surface_gap_mean": 0.00027398343081586063,
+        "surface_gap_p95": 0.0019521397771313787,
+        "max_uncovered_gap": 0.011518605053424835,
+        "volume_ratio": 2.310639237020479
+      }
+    }
+  }
+}

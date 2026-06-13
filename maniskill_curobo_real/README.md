@@ -2,6 +2,10 @@
 
 本文档记录当前 `maniskill_curobo` / `maniskill_codex` 抓取执行链路中用到的 ManiSkill 仿真真值，以及如果迁移到真实机器人时需要替换成哪些真实感知、标定和控制数据。
 
+## 专项文档
+
+- [cuRobo 真机机械臂碰撞球标定步骤](ROBOT_COLLISION_SPHERE_CALIBRATION.md)
+
 ## 当前链路中用到的仿真真值
 
 当前系统不是只把 ZeroGrasp 或 GraspNet 的输出直接丢给 cuRobo。实际执行前后还用了大量 ManiSkill 提供的精确状态。这些数据在真机上不能直接获得，需要替换。
@@ -723,6 +727,124 @@ top-20 候选后才宣布失败，因此既慢又没有执行抓取。
   `runs/pickclutter_full_depth_m4abc_seed1_200/comparison/m3_vs_m4_per_seed.csv`
 - 简表：
   `runs/pickclutter_full_depth_m4abc_seed1_200/comparison/m3_vs_m4_comparison.md`
+
+### M3-ZG / M4-ZG：使用 ZeroGrasp 重建点云复刻 M3-M4
+
+这条实验线从 M3 开始，不再使用 ManiSkill depth 反投影得到的物体表面点云，
+而是使用 ZeroGrasp 内部重建出的每个物体完整表面点云。碰撞几何表达、抓取候选、
+执行参数和结果产物保持与现有 M3/M4-A/B/C 一致。
+
+固定不变的部分：
+
+- 仍复用同一批 full-depth ZeroGrasp top-k 抓取候选。
+- 仍使用相同相机、20-step settle、depth fallback 和执行参数。
+- M3 仍拟合每个非目标实例的 AABB。
+- M4-A 仍拟合 yaw OBB。
+- M4-B 仍生成闭合凸包 mesh。
+- M4-C 仍生成 10 mm voxel ESDF。
+- 输出仍包含逐 seed scene、metadata、debug 框图、run manifest、records、
+  summary 和 M3-vs-M4 对比表。
+
+改变的部分：
+
+1. 使用 `all-objects` mask 把场景中每个可见物体作为独立 ZeroGrasp 实例。
+2. 保存 ZeroGrasp `ObjectGraspResult.point_cloud` 和 normals。
+3. 将点云从 OpenCV camera frame 的毫米单位转换到 robot base frame 的米单位。
+4. 根据 `camera.json` 中的 `is_task_target` 排除目标物体。
+5. 使用其余实例的 ZeroGrasp 重建表面生成 M3/M4 碰撞几何。
+6. 桌面仍使用同一固定 table cuboid；不从 ZeroGrasp 重建桌面。
+
+需要明确的限制：
+
+- 点云几何来自 ZeroGrasp，不再来自 ManiSkill depth 点云。
+- 当前 `all-objects` 实例 mask 仍由 ManiSkill oracle segmentation 生成，因此
+  这是“替换几何重建来源”的公平实验，还不是完整真机感知实验。
+- ZeroGrasp 对遮挡物体的重建质量会直接影响包围盒、mesh 和 ESDF。
+
+先生成 seed `1-200` 的多实例重建：
+
+```bash
+maniskill_curobo/envs/maniskill_curobo/bin/python \
+  -m maniskill_curobo_real.generate_zerograsp_reconstructions \
+  --env-id PickClutterYCB-v1 \
+  --seed-start 1 \
+  --seed-end 200 \
+  --settle-before-export-steps 20 \
+  --output-root \
+  maniskill_curobo_real/runs/pickclutter_zerograsp_reconstructions_seed1_200
+```
+
+再运行 M3/M4-A/B/C：
+
+```bash
+maniskill_curobo/envs/maniskill_curobo/bin/python \
+  -m maniskill_curobo_real.run_world_collision_stages \
+  --env-id PickClutterYCB-v1 \
+  --seed-start 1 \
+  --seed-end 200 \
+  --stages m3 m4a m4b m4c \
+  --point-cloud-source zerograsp_reconstruction \
+  --zerograsp-reconstruction-root \
+  maniskill_curobo_real/runs/pickclutter_zerograsp_reconstructions_seed1_200 \
+  --reuse-candidate-root \
+  maniskill_curobo_real/runs/m4_full_depth_candidates_seed1_200 \
+  --output-root \
+  maniskill_curobo_real/runs/pickclutter_zerograsp_reconstruction_m3_m4abc_seed1_200
+```
+
+最后可继续复用 `summarize_m4_benchmark.py`，把同一个 `records.jsonl`
+同时作为 M3 和 M4 输入，生成与原实验同名的 JSON、CSV 和 Markdown 对比产物。
+
+#### seed1-200 正式结果
+
+本轮已经完成：
+
+- 场景：`PickClutterYCB-v1`
+- seed：`1-200`
+- 重建输入：settle 20 step 后的 RGB-D 与 `all-objects` oracle instance mask
+- 重建完成：`200/200`
+- 重建实例：`1153`
+- 重建点总数：`8,409,921`
+- 抓取候选、top-k、depth fallback 和执行协议与 ManiSkill 点云实验一致
+- seed `1`、`40`、`169` 缺少可复用抓取候选，因此每个阶段实际完成 `197` 个
+
+ZeroGrasp 重建点云内部比较：
+
+| Stage | Lift success | 相对 M3-ZG | 主要结果 |
+|---|---:|---:|---|
+| M3-ZG AABB | 91/197（46.19%） | baseline | 完整重建表面的轴对齐范围会放大几何误差 |
+| M4A-ZG yaw OBB | 100/197（50.76%） | +4.57 pp | 比 AABB 更贴合物体平面朝向 |
+| M4B-ZG convex mesh | 12/197（6.09%） | -40.10 pp | mesh 碰撞世界仍过于保守，不适合作为主线 |
+| M4C-ZG voxel ESDF | 108/197（54.82%） | +8.63 pp | 本轮最佳 ZeroGrasp 重建点云版本 |
+
+与原 ManiSkill depth 点云逐 seed 公平比较：
+
+| Stage | ManiSkill depth | ZeroGrasp reconstruction | 差值 |
+|---|---:|---:|---:|
+| M3 | 101/197（51.27%） | 91/197（46.19%） | -5.08 pp |
+| M4A | 103/197（52.28%） | 100/197（50.76%） | -1.52 pp |
+| M4B | 8/197（4.06%） | 12/197（6.09%） | +2.03 pp |
+| M4C | 111/197（56.35%） | 108/197（54.82%） | -1.52 pp |
+
+这说明 ZeroGrasp 重建点云已经可以替换 ManiSkill depth 点云来构造 M3/M4
+碰撞世界。M4C 的 lift success 只损失 3 个 seed，性能已经非常接近原实验。
+M3 下降更明显，原因是完整表面的极值点会直接扩大 AABB；M4A 和 M4C
+对点云重建误差更稳健。M4B 虽有小幅提升，但绝对成功率仍太低。
+
+当前仍不是完整真机链路：实例划分和目标标识继续使用 ManiSkill oracle
+segmentation。几何点的位置与表面形状来自 ZeroGrasp 重建，不使用
+ManiSkill depth 点云或 actor collision shape。
+
+正式产物：
+
+- 多实例重建：
+  `runs/pickclutter_zerograsp_reconstructions_seed1_200`
+- M3/M4-A/B/C 场景、框图和执行结果：
+  `runs/pickclutter_zerograsp_reconstruction_m3_m4abc_seed1_200`
+- ZeroGrasp 点云内部 M3-vs-M4：
+  `runs/pickclutter_zerograsp_reconstruction_m3_m4abc_seed1_200/comparison`
+- ManiSkill-vs-ZeroGrasp 逐 seed 比较：
+  `runs/pickclutter_zerograsp_reconstruction_m3_m4abc_seed1_200/source_comparison`
 
 ### M5：nvblox / ESDF 在线碰撞世界
 

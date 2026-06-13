@@ -25,6 +25,14 @@ class FakeGrasp:
 class FakeObjectResult:
     object_id = 5
     object_index = 0
+    point_cloud = np.array(
+        [[100.0, 200.0, 300.0], [101.0, 201.0, 301.0]],
+        dtype=np.float32,
+    )
+    normals = np.array(
+        [[0.0, 0.0, 1.0], [0.0, 1.0, 0.0]],
+        dtype=np.float32,
+    )
     n_grasps_before_collision = 3
     n_grasps_after_collision = 2
     n_grasps_final = 1
@@ -61,11 +69,27 @@ class RunZeroGraspInferenceTests(unittest.TestCase):
             report = save_zerograsp_result(FakeResult(), output_dir)
 
             raw_file = output_dir / "raw_outputs" / "object_000_label_5.grasp.npy"
+            reconstruction_file = (
+                output_dir
+                / "raw_outputs"
+                / "object_000_label_5.reconstruction.npz"
+            )
             self.assertTrue(raw_file.is_file())
+            self.assertTrue(reconstruction_file.is_file())
             self.assertTrue((output_dir / "recommended_grasp_top1.json").is_file())
             self.assertTrue((output_dir / "run_report.json").is_file())
             self.assertEqual(report["n_objects"], 1)
             self.assertEqual(report["recommended_grasp"]["object_id"], 5)
+            self.assertEqual(report["objects"][0]["n_reconstruction_points"], 2)
+            with np.load(reconstruction_file) as payload:
+                np.testing.assert_allclose(
+                    payload["points_mm"],
+                    FakeObjectResult.point_cloud,
+                )
+                np.testing.assert_allclose(
+                    payload["normals"],
+                    FakeObjectResult.normals,
+                )
             loaded = json.loads((output_dir / "recommended_grasp_top1.json").read_text())
             self.assertEqual(loaded["object_id"], 5)
 

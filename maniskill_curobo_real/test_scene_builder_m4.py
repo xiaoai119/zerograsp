@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import math
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 
 from maniskill_curobo_real.scene_builder import (
     _voxelize_closed_instance,
+    build_zerograsp_instance_cuboid_scene,
+    build_zerograsp_instance_mesh_scene,
+    build_zerograsp_instance_obb_scene,
+    build_zerograsp_instance_voxel_esdf_scene,
     points_to_aabb_cuboid,
     points_to_convex_hull_mesh,
     points_to_yaw_obb_cuboid,
@@ -67,6 +72,57 @@ class M4GeometryTest(unittest.TestCase):
         self.assertGreater(added, 0)
         self.assertFalse(used_fallback)
         self.assertTrue(occupied[20, 23, 9])
+
+    def test_zerograsp_builders_exclude_target_instance(self) -> None:
+        obstacle_points = self.rotated_box_points()
+        target_points = obstacle_points.copy()
+        target_points[:, 1] += 0.25
+        instances = [
+            SimpleNamespace(
+                label=1,
+                segmentation_id=10,
+                actor_name="obstacle",
+                is_task_target=False,
+                points_base=obstacle_points,
+                reconstruction_file="obstacle.npz",
+            ),
+            SimpleNamespace(
+                label=2,
+                segmentation_id=11,
+                actor_name="target",
+                is_task_target=True,
+                points_base=target_points,
+                reconstruction_file="target.npz",
+            ),
+        ]
+
+        cuboid = build_zerograsp_instance_cuboid_scene(
+            instances=instances,
+            min_instance_points=100,
+        )
+        obb = build_zerograsp_instance_obb_scene(
+            instances=instances,
+            min_instance_points=100,
+        )
+        mesh = build_zerograsp_instance_mesh_scene(
+            instances=instances,
+            min_instance_points=100,
+        )
+        voxel = build_zerograsp_instance_voxel_esdf_scene(
+            instances=instances,
+            min_instance_points=100,
+            voxel_size=0.02,
+        )
+
+        for result in (cuboid, obb, mesh, voxel):
+            self.assertEqual(result.metadata["n_pointcloud_obstacles"], 1)
+            self.assertEqual(result.metadata["point_cloud_source"], "zerograsp_reconstruction")
+            self.assertTrue(result.metadata["target_exclusion_applied"])
+            self.assertFalse(result.metadata["uses_maniskill_depth_geometry"])
+            skipped = result.metadata["skipped_instance_records"]
+            self.assertTrue(
+                any(record["reason"] == "target_excluded" for record in skipped)
+            )
 
 
 if __name__ == "__main__":

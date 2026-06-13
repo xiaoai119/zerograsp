@@ -112,11 +112,26 @@ def save_zerograsp_result(result: Any, output_dir: str | Path) -> dict[str, Any]
     source_by_object_id = {}
     topk_candidates: list[dict[str, Any]] = []
     for obj in result.objects:
-        raw_name = f"object_{int(obj.object_index):03d}_label_{int(obj.object_id)}.grasp.npy"
+        stem = f"object_{int(obj.object_index):03d}_label_{int(obj.object_id)}"
+        raw_name = f"{stem}.grasp.npy"
         raw_path = raw_dir / raw_name
         grasp_array = np.asarray(obj.grasp_group_array, dtype=np.float64)
         np.save(raw_path, grasp_array)
         rel_raw = str(raw_path.relative_to(out))
+        reconstruction_path = raw_dir / f"{stem}.reconstruction.npz"
+        reconstruction_points = np.asarray(obj.point_cloud, dtype=np.float32).reshape(-1, 3)
+        reconstruction_normals = np.asarray(obj.normals, dtype=np.float32).reshape(-1, 3)
+        if reconstruction_points.shape != reconstruction_normals.shape:
+            raise ValueError(
+                "ZeroGrasp reconstruction points and normals must have matching shapes: "
+                f"{reconstruction_points.shape} != {reconstruction_normals.shape}"
+            )
+        np.savez_compressed(
+            reconstruction_path,
+            points_mm=reconstruction_points,
+            normals=reconstruction_normals,
+        )
+        rel_reconstruction = str(reconstruction_path.relative_to(out))
         source_by_object_id[int(obj.object_id)] = rel_raw
         if grasp_array.ndim == 1 and grasp_array.size:
             grasp_array = grasp_array.reshape(1, -1)
@@ -135,6 +150,10 @@ def save_zerograsp_result(result: Any, output_dir: str | Path) -> dict[str, Any]
                 "object_id": int(obj.object_id),
                 "object_index": int(obj.object_index),
                 "raw_grasp_file": rel_raw,
+                "reconstruction_file": rel_reconstruction,
+                "n_reconstruction_points": int(reconstruction_points.shape[0]),
+                "reconstruction_frame": "opencv_camera",
+                "reconstruction_unit": "millimeter",
                 "n_grasps_before_collision": int(obj.n_grasps_before_collision),
                 "n_grasps_after_collision": int(obj.n_grasps_after_collision),
                 "n_grasps_final": int(obj.n_grasps_final),
