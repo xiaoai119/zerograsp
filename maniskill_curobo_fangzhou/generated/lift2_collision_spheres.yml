@@ -1,16 +1,102 @@
+color_palette:
+  blue: [0.10, 0.45, 1.00, 0.38]
+  red: [1.00, 0.25, 0.10, 0.38]
+  green: [0.10, 0.85, 0.25, 0.38]
+  yellow: [1.00, 0.85, 0.05, 0.38]
+  purple: [0.65, 0.25, 1.00, 0.38]
+  cyan: [0.00, 0.85, 1.00, 0.38]
+  orange: [1.00, 0.55, 0.05, 0.38]
+  pink: [1.00, 0.30, 0.75, 0.38]
+  white: [1.00, 1.00, 1.00, 0.32]
+  black: [0.05, 0.05, 0.05, 0.45]
+collision_sphere_styles:
+  left_link11:
+    label: left shoulder/base yaw shell
+    color: blue
+    visible: false
+  right_link21:
+    label: right shoulder/base yaw shell
+    color: red
+    visible: false
+  left_link12:
+    label: left upper arm long link
+    color: cyan
+    visible: false
+  right_link22:
+    label: right upper arm long link
+    color: orange
+    visible: true
+  left_link13:
+    label: left forearm long link and elbow shell
+    color: green
+    visible: false
+  right_link23:
+    label: right forearm long link and elbow shell
+    color: yellow
+    visible: true
+  left_link14:
+    label: left wrist pitch/yaw connector
+    color: purple
+    visible: false
+  right_link24:
+    label: right wrist pitch/yaw connector
+    color: pink
+    visible: true
+  left_link15:
+    label: left wrist motor housing
+    color: blue
+    visible: false
+  right_link25:
+    label: right wrist motor housing
+    color: red
+    visible: true
+  left_link16:
+    label: left gripper palm and wrist end
+    color: cyan
+    visible: false
+  right_link26:
+    label: right gripper palm and wrist end
+    color: orange
+    visible: true
+  left_link17:
+    label: left first finger
+    color: green
+    visible: false
+  right_link27:
+    label: right first finger
+    color: yellow
+    visible: true
+  left_link18:
+    label: left second finger
+    color: purple
+    visible: false
+  right_link28:
+    label: right second finger
+    color: pink
+    visible: true
+# Straight links can be written as:
+#   left_link12:
+#     line:
+#       start: [-0.01, 0.0, 0.0]
+#       end: [-0.25, 0.0, 0.0]
+#       count: 4
+#       radius: 0.046
 collision_spheres:
+  # left_link11: left shoulder/base yaw shell
   left_link11:
   - center:
     - 0.0078
     - 0.0
     - 0.0288
     radius: 0.058
+  # right_link21: right shoulder/base yaw shell
   right_link21:
   - center:
     - 0.0078
     - 0.0
     - 0.0288
     radius: 0.058
+  # left_link12: left upper arm long link
   left_link12:
   - center:
     - -0.0086847
@@ -32,27 +118,14 @@ collision_spheres:
     - -0.0003053
     - 0.0005058
     radius: 0.0471445
+  # right_link22: right upper arm long link
   right_link22:
-  - center:
-    - -0.0086847
-    - 0.0002655
-    - 0.0006897
-    radius: 0.0456612
-  - center:
-    - -0.2534536
-    - -0.0016362
-    - 0.0006702
-    radius: 0.0465024
-  - center:
-    - -0.1785803
-    - -0.0004442
-    - 0.0012827
-    radius: 0.043728
-  - center:
-    - -0.0951027
-    - -0.0003053
-    - 0.0005058
-    radius: 0.0471445
+    line:
+      start: [-0.008, 0.0, 0.0007]
+      end: [-0.268, 0.0, 0.0007]
+      count: 8
+      radius: 0.035
+  # left_link13: left forearm long link and elbow shell
   left_link13:
   - center:
     - 0.2163684
@@ -79,32 +152,22 @@ collision_spheres:
     - -0.0355478
     - 0.0276638
     radius: 0.0196326
+  # right_link23: right forearm long link and elbow shell
   right_link23:
-  - center:
-    - 0.2163684
-    - -0.0025723
-    - 0.0572689
-    radius: 0.0598568
-  - center:
-    - 0.089181
-    - 0.0060327
-    - 0.0548302
-    radius: 0.0615215
-  - center:
-    - -0.0024277
-    - -0.0355963
-    - 0.0009162
-    radius: 0.0191721
-  - center:
-    - 0.0079902
-    - 0.0362417
-    - 0.0204695
-    radius: 0.0299147
-  - center:
-    - 0.0245045
-    - -0.0355478
-    - 0.0276638
-    radius: 0.0196326
+    segments:
+    - start: [0.010, 0.0, 0.042]
+      end: [0.255, 0.0, 0.060]
+      count: 8
+      radius: 0.040
+    - start: [0.004, -0.036, 0.006]
+      end: [0.004, -0.036, 0.006]
+      count: 1
+      radius: 0.022
+    - start: [0.010, 0.036, 0.020]
+      end: [0.010, 0.036, 0.020]
+      count: 1
+      radius: 0.025
+  # left_link14: left wrist pitch/yaw connector
   left_link14:
   - center:
     - 0.0632148
@@ -116,17 +179,14 @@ collision_spheres:
     - -5.18e-05
     - 0.0126992
     radius: 0.0478864
+  # right_link24: right wrist pitch/yaw connector
   right_link24:
-  - center:
-    - 0.0632148
-    - 0.0003893
-    - 0.0555384
-    radius: 0.0450891
-  - center:
-    - 0.0202594
-    - -5.18e-05
-    - 0.0126992
-    radius: 0.0478864
+    line:
+      start: [0.005, 0.0, 0.004]
+      end: [0.086, 0.0, 0.076]
+      count: 5
+      radius: 0.034
+  # left_link15: left wrist motor housing
   left_link15:
   - center:
     - 0.0009979
@@ -143,128 +203,135 @@ collision_spheres:
     - 0.0011951
     - -0.054498
     radius: 0.0340497
+  # right_link25: right wrist motor housing
   right_link25:
-  - center:
-    - 0.0009979
-    - 0.0010314
-    - -0.0930021
-    radius: 0.0400428
-  - center:
-    - -0.0011138
-    - -0.0001867
-    - -0.0263733
-    radius: 0.0374199
-  - center:
-    - 0.0046595
-    - 0.0011951
-    - -0.054498
-    radius: 0.0340497
+    line:
+      start: [0.0, 0.0, -0.015]
+      end: [0.0, 0.0, -0.116]
+      count: 6
+      radius: 0.031
+  # left_link16: left gripper palm and wrist end
   left_link16:
-  - center:
-    - 0.0446176
-    - -0.0007603
-    - -0.001012
-    radius: 0.0508955
-  - center:
-    - 0.0400272
-    - 0.0022784
-    - 0.0190439
-    radius: 0.0051764
-  - center:
-    - 0.0364839
-    - -0.0005233
-    - -0.078792
-    radius: 0.0286071
-  - center:
-    - 0.0340436
-    - -0.0004091
-    - -0.1232374
-    radius: 0.0234321
+    segments:
+    - start: [0.038, -0.022, -0.002]
+      end: [0.038, 0.022, -0.002]
+      count: 3
+      radius: 0.029
+    - start: [0.014, -0.030, -0.004]
+      end: [0.064, -0.030, -0.004]
+      count: 3
+      radius: 0.018
+    - start: [0.014, 0.030, -0.004]
+      end: [0.064, 0.030, -0.004]
+      count: 3
+      radius: 0.018
+    - start: [0.040, 0.002, 0.019]
+      end: [0.040, 0.002, 0.019]
+      count: 1
+      radius: 0.006
+    - start: [0.036, 0.0, -0.064]
+      end: [0.034, 0.0, -0.127]
+      count: 3
+      radius: [0.023, 0.021, 0.020]
+  # right_link26: right gripper palm and wrist end
   right_link26:
-  - center:
-    - 0.0446176
-    - -0.0007603
-    - -0.001012
-    radius: 0.0508955
-  - center:
-    - 0.0400272
-    - 0.0022784
-    - 0.0190439
-    radius: 0.0051764
-  - center:
-    - 0.0364839
-    - -0.0005233
-    - -0.078792
-    radius: 0.0286071
-  - center:
-    - 0.0340436
-    - -0.0004091
-    - -0.1232374
-    radius: 0.0234321
+    segments:
+    - start: [0.038, -0.022, -0.002]
+      end: [0.038, 0.022, -0.002]
+      count: 3
+      radius: 0.029
+    - start: [0.014, -0.030, -0.004]
+      end: [0.064, -0.030, -0.004]
+      count: 3
+      radius: 0.018
+    - start: [0.014, 0.030, -0.004]
+      end: [0.064, 0.030, -0.004]
+      count: 3
+      radius: 0.018
+    - start: [0.040, 0.002, 0.019]
+      end: [0.040, 0.002, 0.019]
+      count: 1
+      radius: 0.006
+    - start: [0.036, 0.0, -0.064]
+      end: [0.034, 0.0, -0.127]
+      count: 3
+      radius: [0.023, 0.021, 0.020]
+  # left_link17: left first finger
   left_link17:
-  - center:
-    - 0.008462
-    - -0.0197254
-    - 0.0046309
-    radius: 0.054766
-  - center:
-    - -0.0163367
-    - -0.0627046
-    - 0.029837
-    radius: 0.0103076
-  - center:
-    - -0.0093467
-    - -0.0129613
-    - -0.052635
-    radius: 0.0222771
+    segments:
+    - start: [0.058, -0.006, 0.020]
+      end: [0.034, -0.012, 0.012]
+      count: 2
+      radius: 0.018
+    - start: [0.046, -0.010, 0.010]
+      end: [0.010, -0.018, 0.005]
+      count: 3
+      radius: 0.020
+    - start: [0.005, -0.016, -0.018]
+      end: [-0.009, -0.013, -0.053]
+      count: 3
+      radius: 0.020
+    - start: [-0.017, -0.044, 0.018]
+      end: [-0.017, -0.066, 0.031]
+      count: 2
+      radius: 0.012
+  # right_link27: right first finger
   right_link27:
-  - center:
-    - 0.008462
-    - -0.0197254
-    - 0.0046309
-    radius: 0.054766
-  - center:
-    - -0.0163367
-    - -0.0627046
-    - 0.029837
-    radius: 0.0103076
-  - center:
-    - -0.0093467
-    - -0.0129613
-    - -0.052635
-    radius: 0.0222771
+    segments:
+    - start: [0.058, -0.006, 0.020]
+      end: [0.034, -0.012, 0.012]
+      count: 2
+      radius: 0.018
+    - start: [0.046, -0.010, 0.010]
+      end: [0.010, -0.018, 0.005]
+      count: 3
+      radius: 0.020
+    - start: [0.005, -0.016, -0.018]
+      end: [-0.009, -0.013, -0.053]
+      count: 3
+      radius: 0.020
+    - start: [-0.017, -0.044, 0.018]
+      end: [-0.017, -0.066, 0.031]
+      count: 2
+      radius: 0.012
+  # left_link18: left second finger
   left_link18:
-  - center:
-    - 0.0098409
-    - 0.0213848
-    - -0.0070006
-    radius: 0.0550762
-  - center:
-    - -0.0059254
-    - 0.0123027
-    - -0.053344
-    radius: 0.0214861
-  - center:
-    - -0.0190327
-    - 0.0642471
-    - -0.0208694
-    radius: 0.0073261
+    segments:
+    - start: [0.058, 0.006, 0.010]
+      end: [0.034, 0.012, 0.002]
+      count: 2
+      radius: 0.018
+    - start: [0.046, 0.010, 0.002]
+      end: [0.010, 0.021, -0.007]
+      count: 3
+      radius: 0.020
+    - start: [0.004, 0.016, -0.028]
+      end: [-0.006, 0.012, -0.053]
+      count: 3
+      radius: 0.020
+    - start: [-0.018, 0.044, -0.018]
+      end: [-0.019, 0.066, -0.021]
+      count: 2
+      radius: 0.010
+  # right_link28: right second finger
   right_link28:
-  - center:
-    - 0.0098409
-    - 0.0213848
-    - -0.0070006
-    radius: 0.0550762
-  - center:
-    - -0.0059254
-    - 0.0123027
-    - -0.053344
-    radius: 0.0214861
-  - center:
-    - -0.0190327
-    - 0.0642471
-    - -0.0208694
-    radius: 0.0073261
+    segments:
+    - start: [0.058, 0.006, 0.010]
+      end: [0.034, 0.012, 0.002]
+      count: 2
+      radius: 0.018
+    - start: [0.046, 0.010, 0.002]
+      end: [0.010, 0.021, -0.007]
+      count: 3
+      radius: 0.020
+    - start: [0.004, 0.016, -0.028]
+      end: [-0.006, 0.012, -0.053]
+      count: 3
+      radius: 0.020
+    - start: [-0.018, 0.044, -0.018]
+      end: [-0.019, 0.066, -0.021]
+      count: 2
+      radius: 0.010
 metadata:
   source: cuRobo MorphIt fit on Lift2 visual meshes
   units: metres

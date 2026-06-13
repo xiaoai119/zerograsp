@@ -129,15 +129,6 @@
         <sphere radius="0.058" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0078 0.0 0.0288" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.058" />
-      </geometry>
-      <material name="left_link11_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
   </link>
   <joint name="left_joint11" type="revolute">
     <origin xyz="0.059949 0.25 0.0245" rpy="0 0 0" />
@@ -167,60 +158,24 @@
         <sphere radius="0.0456612" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="-0.0086847 0.0002655 0.0006897" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0456612" />
-      </geometry>
-      <material name="left_link12_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_01">
       <origin xyz="-0.2534536 -0.0016362 0.0006702" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0465024" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.2534536 -0.0016362 0.0006702" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0465024" />
-      </geometry>
-      <material name="left_link12_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_02">
       <origin xyz="-0.1785803 -0.0004442 0.0012827" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.043728" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.1785803 -0.0004442 0.0012827" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.043728" />
-      </geometry>
-      <material name="left_link12_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_03">
       <origin xyz="-0.0951027 -0.0003053 0.0005058" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0471445" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_03">
-      <origin xyz="-0.0951027 -0.0003053 0.0005058" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0471445" />
-      </geometry>
-      <material name="left_link12_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
   </link>
   <joint name="left_joint12" type="revolute">
     <origin xyz="0.02 0 0.04" rpy="0 0 0" />
@@ -250,75 +205,30 @@
         <sphere radius="0.0598568" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.2163684 -0.0025723 0.0572689" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0598568" />
-      </geometry>
-      <material name="left_link13_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_01">
       <origin xyz="0.089181 0.0060327 0.0548302" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0615215" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_01">
-      <origin xyz="0.089181 0.0060327 0.0548302" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0615215" />
-      </geometry>
-      <material name="left_link13_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_02">
       <origin xyz="-0.0024277 -0.0355963 0.0009162" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0191721" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.0024277 -0.0355963 0.0009162" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0191721" />
-      </geometry>
-      <material name="left_link13_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_03">
       <origin xyz="0.0079902 0.0362417 0.0204695" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0299147" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_03">
-      <origin xyz="0.0079902 0.0362417 0.0204695" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0299147" />
-      </geometry>
-      <material name="left_link13_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_04">
       <origin xyz="0.0245045 -0.0355478 0.0276638" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0196326" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_04">
-      <origin xyz="0.0245045 -0.0355478 0.0276638" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0196326" />
-      </geometry>
-      <material name="left_link13_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
   </link>
   <joint name="left_joint13" type="revolute">
     <origin xyz="-0.264 3E-05 0" rpy="0 0 0" />
@@ -348,30 +258,12 @@
         <sphere radius="0.0450891" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0632148 0.0003893 0.0555384" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0450891" />
-      </geometry>
-      <material name="left_link14_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_01">
       <origin xyz="0.0202594 -5.18e-05 0.0126992" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0478864" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_01">
-      <origin xyz="0.0202594 -5.18e-05 0.0126992" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0478864" />
-      </geometry>
-      <material name="left_link14_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
   </link>
   <joint name="left_joint14" type="revolute">
     <origin xyz="0.245 -3E-05 0.056" rpy="0 0 0" />
@@ -401,45 +293,18 @@
         <sphere radius="0.0400428" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0009979 0.0010314 -0.0930021" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0400428" />
-      </geometry>
-      <material name="left_link15_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_01">
       <origin xyz="-0.0011138 -0.0001867 -0.0263733" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0374199" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.0011138 -0.0001867 -0.0263733" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0374199" />
-      </geometry>
-      <material name="left_link15_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_02">
       <origin xyz="0.0046595 0.0011951 -0.054498" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.0340497" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_02">
-      <origin xyz="0.0046595 0.0011951 -0.054498" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0340497" />
-      </geometry>
-      <material name="left_link15_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
   </link>
   <joint name="left_joint15" type="revolute">
     <origin xyz="0.06775 0 0.0845" rpy="0 0 0" />
@@ -464,65 +329,83 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.0446176 -0.0007603 -0.001012" rpy="0 0 0" />
+      <origin xyz="0.038 -0.022 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0508955" />
+        <sphere radius="0.029" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0446176 -0.0007603 -0.001012" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0508955" />
-      </geometry>
-      <material name="left_link16_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="0.0400272 0.0022784 0.0190439" rpy="0 0 0" />
+      <origin xyz="0.038 0.0 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0051764" />
+        <sphere radius="0.029" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_01">
-      <origin xyz="0.0400272 0.0022784 0.0190439" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0051764" />
-      </geometry>
-      <material name="left_link16_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="0.0364839 -0.0005233 -0.078792" rpy="0 0 0" />
+      <origin xyz="0.038 0.022 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0286071" />
+        <sphere radius="0.029" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_02">
-      <origin xyz="0.0364839 -0.0005233 -0.078792" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0286071" />
-      </geometry>
-      <material name="left_link16_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_03">
-      <origin xyz="0.0340436 -0.0004091 -0.1232374" rpy="0 0 0" />
+      <origin xyz="0.014 -0.03 -0.004" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0234321" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_03">
-      <origin xyz="0.0340436 -0.0004091 -0.1232374" rpy="0 0 0" />
+    <collision name="collision_sphere_04">
+      <origin xyz="0.039 -0.03 -0.004" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0234321" />
+        <sphere radius="0.018" />
       </geometry>
-      <material name="left_link16_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
+    </collision>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.064 -0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_06">
+      <origin xyz="0.014 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_07">
+      <origin xyz="0.039 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_08">
+      <origin xyz="0.064 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_09">
+      <origin xyz="0.04 0.002 0.019" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.006" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_10">
+      <origin xyz="0.036 0.0 -0.064" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.023" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_11">
+      <origin xyz="0.035 0.0 -0.0955" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.021" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_12">
+      <origin xyz="0.034 0.0 -0.127" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint16" type="revolute">
     <origin xyz="0.02895 0 -0.0845" rpy="0 0 0" />
@@ -547,50 +430,65 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.008462 -0.0197254 0.0046309" rpy="0 0 0" />
+      <origin xyz="0.058 -0.006 0.02" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.054766" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.008462 -0.0197254 0.0046309" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.054766" />
-      </geometry>
-      <material name="left_link17_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="-0.0163367 -0.0627046 0.029837" rpy="0 0 0" />
+      <origin xyz="0.034 -0.012 0.012" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0103076" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.0163367 -0.0627046 0.029837" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0103076" />
-      </geometry>
-      <material name="left_link17_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="-0.0093467 -0.0129613 -0.052635" rpy="0 0 0" />
+      <origin xyz="0.046 -0.01 0.01" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0222771" />
+        <sphere radius="0.02" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.0093467 -0.0129613 -0.052635" rpy="0 0 0" />
+    <collision name="collision_sphere_03">
+      <origin xyz="0.028 -0.014 0.0075" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0222771" />
+        <sphere radius="0.02" />
       </geometry>
-      <material name="left_link17_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
+    </collision>
+    <collision name="collision_sphere_04">
+      <origin xyz="0.01 -0.018 0.005" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.005 -0.016 -0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_06">
+      <origin xyz="-0.002 -0.0145 -0.0355" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_07">
+      <origin xyz="-0.009 -0.013 -0.053" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_08">
+      <origin xyz="-0.017 -0.044 0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.012" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_09">
+      <origin xyz="-0.017 -0.066 0.031" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.012" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint17" type="prismatic">
     <origin xyz="0.08397 0.02721 -0.0062702" rpy="0 0 0" />
@@ -615,50 +513,65 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.0098409 0.0213848 -0.0070006" rpy="0 0 0" />
+      <origin xyz="0.058 0.006 0.01" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0550762" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0098409 0.0213848 -0.0070006" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0550762" />
-      </geometry>
-      <material name="left_link18_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="-0.0059254 0.0123027 -0.053344" rpy="0 0 0" />
+      <origin xyz="0.034 0.012 0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0214861" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.0059254 0.0123027 -0.053344" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.0214861" />
-      </geometry>
-      <material name="left_link18_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="-0.0190327 0.0642471 -0.0208694" rpy="0 0 0" />
+      <origin xyz="0.046 0.01 0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0073261" />
+        <sphere radius="0.02" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.0190327 0.0642471 -0.0208694" rpy="0 0 0" />
+    <collision name="collision_sphere_03">
+      <origin xyz="0.028 0.0155 -0.0025" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0073261" />
+        <sphere radius="0.02" />
       </geometry>
-      <material name="left_link18_collision_sphere">
-        <color rgba="0.1 0.45 1.0 0.38" />
-      </material>
-    </visual>
+    </collision>
+    <collision name="collision_sphere_04">
+      <origin xyz="0.01 0.021 -0.007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.004 0.016 -0.028" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_06">
+      <origin xyz="-0.001 0.014 -0.0405" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_07">
+      <origin xyz="-0.006 0.012 -0.053" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_08">
+      <origin xyz="-0.018 0.044 -0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+    </collision>
+    <collision name="collision_sphere_09">
+      <origin xyz="-0.019 0.066 -0.021" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint18" type="prismatic">
     <origin xyz="0.08397 -0.023638 -0.0062703" rpy="0 0 0" />
@@ -688,15 +601,6 @@
         <sphere radius="0.058" />
       </geometry>
     </collision>
-    <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0078 0.0 0.0288" rpy="0 0 0" />
-      <geometry>
-        <sphere radius="0.058" />
-      </geometry>
-      <material name="right_link21_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
-      </material>
-    </visual>
   </link>
   <joint name="right_joint21" type="revolute">
     <origin xyz="0.059949 -0.25 0.0245" rpy="0 0 0" />
@@ -721,63 +625,123 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="-0.0086847 0.0002655 0.0006897" rpy="0 0 0" />
+      <origin xyz="-0.008 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0456612" />
+        <sphere radius="0.035" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_00">
-      <origin xyz="-0.0086847 0.0002655 0.0006897" rpy="0 0 0" />
+      <origin xyz="-0.008 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0456612" />
+        <sphere radius="0.035" />
       </geometry>
       <material name="right_link22_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="-0.2534536 -0.0016362 0.0006702" rpy="0 0 0" />
+      <origin xyz="-0.0451429 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0465024" />
+        <sphere radius="0.035" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.2534536 -0.0016362 0.0006702" rpy="0 0 0" />
+      <origin xyz="-0.0451429 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0465024" />
+        <sphere radius="0.035" />
       </geometry>
       <material name="right_link22_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="-0.1785803 -0.0004442 0.0012827" rpy="0 0 0" />
+      <origin xyz="-0.0822857 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.043728" />
+        <sphere radius="0.035" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.1785803 -0.0004442 0.0012827" rpy="0 0 0" />
+      <origin xyz="-0.0822857 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.043728" />
+        <sphere radius="0.035" />
       </geometry>
       <material name="right_link22_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_03">
-      <origin xyz="-0.0951027 -0.0003053 0.0005058" rpy="0 0 0" />
+      <origin xyz="-0.1194286 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0471445" />
+        <sphere radius="0.035" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_03">
-      <origin xyz="-0.0951027 -0.0003053 0.0005058" rpy="0 0 0" />
+      <origin xyz="-0.1194286 0.0 0.0007" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0471445" />
+        <sphere radius="0.035" />
       </geometry>
       <material name="right_link22_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_04">
+      <origin xyz="-0.1565714 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_04">
+      <origin xyz="-0.1565714 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+      <material name="right_link22_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_05">
+      <origin xyz="-0.1937143 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_05">
+      <origin xyz="-0.1937143 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+      <material name="right_link22_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_06">
+      <origin xyz="-0.2308571 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_06">
+      <origin xyz="-0.2308571 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+      <material name="right_link22_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_07">
+      <origin xyz="-0.268 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_07">
+      <origin xyz="-0.268 0.0 0.0007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.035" />
+      </geometry>
+      <material name="right_link22_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
   </link>
@@ -804,78 +768,153 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.2163684 -0.0025723 0.0572689" rpy="0 0 0" />
+      <origin xyz="0.01 0.0 0.042" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0598568" />
+        <sphere radius="0.04" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_00">
-      <origin xyz="0.2163684 -0.0025723 0.0572689" rpy="0 0 0" />
+      <origin xyz="0.01 0.0 0.042" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0598568" />
+        <sphere radius="0.04" />
       </geometry>
       <material name="right_link23_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="0.089181 0.0060327 0.0548302" rpy="0 0 0" />
+      <origin xyz="0.045 0.0 0.0445714" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0615215" />
+        <sphere radius="0.04" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_01">
-      <origin xyz="0.089181 0.0060327 0.0548302" rpy="0 0 0" />
+      <origin xyz="0.045 0.0 0.0445714" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0615215" />
+        <sphere radius="0.04" />
       </geometry>
       <material name="right_link23_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="-0.0024277 -0.0355963 0.0009162" rpy="0 0 0" />
+      <origin xyz="0.08 0.0 0.0471429" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0191721" />
+        <sphere radius="0.04" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.0024277 -0.0355963 0.0009162" rpy="0 0 0" />
+      <origin xyz="0.08 0.0 0.0471429" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0191721" />
+        <sphere radius="0.04" />
       </geometry>
       <material name="right_link23_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_03">
-      <origin xyz="0.0079902 0.0362417 0.0204695" rpy="0 0 0" />
+      <origin xyz="0.115 0.0 0.0497143" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0299147" />
+        <sphere radius="0.04" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_03">
-      <origin xyz="0.0079902 0.0362417 0.0204695" rpy="0 0 0" />
+      <origin xyz="0.115 0.0 0.0497143" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0299147" />
+        <sphere radius="0.04" />
       </geometry>
       <material name="right_link23_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_04">
-      <origin xyz="0.0245045 -0.0355478 0.0276638" rpy="0 0 0" />
+      <origin xyz="0.15 0.0 0.0522857" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0196326" />
+        <sphere radius="0.04" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_04">
-      <origin xyz="0.0245045 -0.0355478 0.0276638" rpy="0 0 0" />
+      <origin xyz="0.15 0.0 0.0522857" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0196326" />
+        <sphere radius="0.04" />
       </geometry>
       <material name="right_link23_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.185 0.0 0.0548571" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_05">
+      <origin xyz="0.185 0.0 0.0548571" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+      <material name="right_link23_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_06">
+      <origin xyz="0.22 0.0 0.0574286" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_06">
+      <origin xyz="0.22 0.0 0.0574286" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+      <material name="right_link23_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_07">
+      <origin xyz="0.255 0.0 0.06" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_07">
+      <origin xyz="0.255 0.0 0.06" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+      <material name="right_link23_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_08">
+      <origin xyz="0.004 -0.036 0.006" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.022" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_08">
+      <origin xyz="0.004 -0.036 0.006" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.022" />
+      </geometry>
+      <material name="right_link23_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_09">
+      <origin xyz="0.01 0.036 0.02" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.025" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_09">
+      <origin xyz="0.01 0.036 0.02" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.025" />
+      </geometry>
+      <material name="right_link23_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
   </link>
@@ -902,33 +941,78 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.0632148 0.0003893 0.0555384" rpy="0 0 0" />
+      <origin xyz="0.005 0.0 0.004" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0450891" />
+        <sphere radius="0.034" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0632148 0.0003893 0.0555384" rpy="0 0 0" />
+      <origin xyz="0.005 0.0 0.004" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0450891" />
+        <sphere radius="0.034" />
       </geometry>
       <material name="right_link24_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.3 0.75 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="0.0202594 -5.18e-05 0.0126992" rpy="0 0 0" />
+      <origin xyz="0.02525 0.0 0.022" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0478864" />
+        <sphere radius="0.034" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_01">
-      <origin xyz="0.0202594 -5.18e-05 0.0126992" rpy="0 0 0" />
+      <origin xyz="0.02525 0.0 0.022" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0478864" />
+        <sphere radius="0.034" />
       </geometry>
       <material name="right_link24_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_02">
+      <origin xyz="0.0455 0.0 0.04" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_02">
+      <origin xyz="0.0455 0.0 0.04" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+      <material name="right_link24_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_03">
+      <origin xyz="0.06575 0.0 0.058" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_03">
+      <origin xyz="0.06575 0.0 0.058" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+      <material name="right_link24_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_04">
+      <origin xyz="0.086 0.0 0.076" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_04">
+      <origin xyz="0.086 0.0 0.076" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+      <material name="right_link24_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
       </material>
     </visual>
   </link>
@@ -955,45 +1039,90 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.0009979 0.0010314 -0.0930021" rpy="0 0 0" />
+      <origin xyz="0.0 0.0 -0.015" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0400428" />
+        <sphere radius="0.031" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0009979 0.0010314 -0.0930021" rpy="0 0 0" />
+      <origin xyz="0.0 0.0 -0.015" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0400428" />
+        <sphere radius="0.031" />
       </geometry>
       <material name="right_link25_collision_sphere">
         <color rgba="1.0 0.25 0.1 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="-0.0011138 -0.0001867 -0.0263733" rpy="0 0 0" />
+      <origin xyz="0.0 0.0 -0.0352" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0374199" />
+        <sphere radius="0.031" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.0011138 -0.0001867 -0.0263733" rpy="0 0 0" />
+      <origin xyz="0.0 0.0 -0.0352" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0374199" />
+        <sphere radius="0.031" />
       </geometry>
       <material name="right_link25_collision_sphere">
         <color rgba="1.0 0.25 0.1 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="0.0046595 0.0011951 -0.054498" rpy="0 0 0" />
+      <origin xyz="0.0 0.0 -0.0554" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0340497" />
+        <sphere radius="0.031" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_02">
-      <origin xyz="0.0046595 0.0011951 -0.054498" rpy="0 0 0" />
+      <origin xyz="0.0 0.0 -0.0554" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0340497" />
+        <sphere radius="0.031" />
+      </geometry>
+      <material name="right_link25_collision_sphere">
+        <color rgba="1.0 0.25 0.1 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_03">
+      <origin xyz="0.0 0.0 -0.0756" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.031" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_03">
+      <origin xyz="0.0 0.0 -0.0756" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.031" />
+      </geometry>
+      <material name="right_link25_collision_sphere">
+        <color rgba="1.0 0.25 0.1 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_04">
+      <origin xyz="0.0 0.0 -0.0958" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.031" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_04">
+      <origin xyz="0.0 0.0 -0.0958" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.031" />
+      </geometry>
+      <material name="right_link25_collision_sphere">
+        <color rgba="1.0 0.25 0.1 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.0 0.0 -0.116" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.031" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_05">
+      <origin xyz="0.0 0.0 -0.116" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.031" />
       </geometry>
       <material name="right_link25_collision_sphere">
         <color rgba="1.0 0.25 0.1 0.38" />
@@ -1023,63 +1152,198 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.0446176 -0.0007603 -0.001012" rpy="0 0 0" />
+      <origin xyz="0.038 -0.022 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0508955" />
+        <sphere radius="0.029" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0446176 -0.0007603 -0.001012" rpy="0 0 0" />
+      <origin xyz="0.038 -0.022 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0508955" />
+        <sphere radius="0.029" />
       </geometry>
       <material name="right_link26_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="0.0400272 0.0022784 0.0190439" rpy="0 0 0" />
+      <origin xyz="0.038 0.0 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0051764" />
+        <sphere radius="0.029" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_01">
-      <origin xyz="0.0400272 0.0022784 0.0190439" rpy="0 0 0" />
+      <origin xyz="0.038 0.0 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0051764" />
+        <sphere radius="0.029" />
       </geometry>
       <material name="right_link26_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="0.0364839 -0.0005233 -0.078792" rpy="0 0 0" />
+      <origin xyz="0.038 0.022 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0286071" />
+        <sphere radius="0.029" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_02">
-      <origin xyz="0.0364839 -0.0005233 -0.078792" rpy="0 0 0" />
+      <origin xyz="0.038 0.022 -0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0286071" />
+        <sphere radius="0.029" />
       </geometry>
       <material name="right_link26_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_03">
-      <origin xyz="0.0340436 -0.0004091 -0.1232374" rpy="0 0 0" />
+      <origin xyz="0.014 -0.03 -0.004" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0234321" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_03">
-      <origin xyz="0.0340436 -0.0004091 -0.1232374" rpy="0 0 0" />
+      <origin xyz="0.014 -0.03 -0.004" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0234321" />
+        <sphere radius="0.018" />
       </geometry>
       <material name="right_link26_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_04">
+      <origin xyz="0.039 -0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_04">
+      <origin xyz="0.039 -0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.064 -0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_05">
+      <origin xyz="0.064 -0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_06">
+      <origin xyz="0.014 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_06">
+      <origin xyz="0.014 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_07">
+      <origin xyz="0.039 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_07">
+      <origin xyz="0.039 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_08">
+      <origin xyz="0.064 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_08">
+      <origin xyz="0.064 0.03 -0.004" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.018" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_09">
+      <origin xyz="0.04 0.002 0.019" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.006" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_09">
+      <origin xyz="0.04 0.002 0.019" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.006" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_10">
+      <origin xyz="0.036 0.0 -0.064" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.023" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_10">
+      <origin xyz="0.036 0.0 -0.064" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.023" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_11">
+      <origin xyz="0.035 0.0 -0.0955" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.021" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_11">
+      <origin xyz="0.035 0.0 -0.0955" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.021" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_12">
+      <origin xyz="0.034 0.0 -0.127" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_12">
+      <origin xyz="0.034 0.0 -0.127" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link26_collision_sphere">
+        <color rgba="1.0 0.55 0.05 0.38" />
       </material>
     </visual>
   </link>
@@ -1106,48 +1370,153 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.008462 -0.0197254 0.0046309" rpy="0 0 0" />
+      <origin xyz="0.058 -0.006 0.02" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.054766" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_00">
-      <origin xyz="0.008462 -0.0197254 0.0046309" rpy="0 0 0" />
+      <origin xyz="0.058 -0.006 0.02" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.054766" />
+        <sphere radius="0.018" />
       </geometry>
       <material name="right_link27_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="-0.0163367 -0.0627046 0.029837" rpy="0 0 0" />
+      <origin xyz="0.034 -0.012 0.012" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0103076" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.0163367 -0.0627046 0.029837" rpy="0 0 0" />
+      <origin xyz="0.034 -0.012 0.012" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0103076" />
+        <sphere radius="0.018" />
       </geometry>
       <material name="right_link27_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="-0.0093467 -0.0129613 -0.052635" rpy="0 0 0" />
+      <origin xyz="0.046 -0.01 0.01" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0222771" />
+        <sphere radius="0.02" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.0093467 -0.0129613 -0.052635" rpy="0 0 0" />
+      <origin xyz="0.046 -0.01 0.01" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0222771" />
+        <sphere radius="0.02" />
       </geometry>
       <material name="right_link27_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_03">
+      <origin xyz="0.028 -0.014 0.0075" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_03">
+      <origin xyz="0.028 -0.014 0.0075" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link27_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_04">
+      <origin xyz="0.01 -0.018 0.005" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_04">
+      <origin xyz="0.01 -0.018 0.005" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link27_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.005 -0.016 -0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_05">
+      <origin xyz="0.005 -0.016 -0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link27_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_06">
+      <origin xyz="-0.002 -0.0145 -0.0355" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_06">
+      <origin xyz="-0.002 -0.0145 -0.0355" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link27_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_07">
+      <origin xyz="-0.009 -0.013 -0.053" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_07">
+      <origin xyz="-0.009 -0.013 -0.053" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link27_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_08">
+      <origin xyz="-0.017 -0.044 0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.012" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_08">
+      <origin xyz="-0.017 -0.044 0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.012" />
+      </geometry>
+      <material name="right_link27_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_09">
+      <origin xyz="-0.017 -0.066 0.031" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.012" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_09">
+      <origin xyz="-0.017 -0.066 0.031" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.012" />
+      </geometry>
+      <material name="right_link27_collision_sphere">
+        <color rgba="1.0 0.85 0.05 0.38" />
       </material>
     </visual>
   </link>
@@ -1174,48 +1543,153 @@
       </material>
     </visual>
     <collision name="collision_sphere_00">
-      <origin xyz="0.0098409 0.0213848 -0.0070006" rpy="0 0 0" />
+      <origin xyz="0.058 0.006 0.01" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0550762" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_00">
-      <origin xyz="0.0098409 0.0213848 -0.0070006" rpy="0 0 0" />
+      <origin xyz="0.058 0.006 0.01" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0550762" />
+        <sphere radius="0.018" />
       </geometry>
       <material name="right_link28_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.3 0.75 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_01">
-      <origin xyz="-0.0059254 0.0123027 -0.053344" rpy="0 0 0" />
+      <origin xyz="0.034 0.012 0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0214861" />
+        <sphere radius="0.018" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_01">
-      <origin xyz="-0.0059254 0.0123027 -0.053344" rpy="0 0 0" />
+      <origin xyz="0.034 0.012 0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0214861" />
+        <sphere radius="0.018" />
       </geometry>
       <material name="right_link28_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.3 0.75 0.38" />
       </material>
     </visual>
     <collision name="collision_sphere_02">
-      <origin xyz="-0.0190327 0.0642471 -0.0208694" rpy="0 0 0" />
+      <origin xyz="0.046 0.01 0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0073261" />
+        <sphere radius="0.02" />
       </geometry>
     </collision>
     <visual name="collision_sphere_visual_02">
-      <origin xyz="-0.0190327 0.0642471 -0.0208694" rpy="0 0 0" />
+      <origin xyz="0.046 0.01 0.002" rpy="0 0 0" />
       <geometry>
-        <sphere radius="0.0073261" />
+        <sphere radius="0.02" />
       </geometry>
       <material name="right_link28_collision_sphere">
-        <color rgba="1.0 0.25 0.1 0.38" />
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_03">
+      <origin xyz="0.028 0.0155 -0.0025" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_03">
+      <origin xyz="0.028 0.0155 -0.0025" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link28_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_04">
+      <origin xyz="0.01 0.021 -0.007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_04">
+      <origin xyz="0.01 0.021 -0.007" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link28_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_05">
+      <origin xyz="0.004 0.016 -0.028" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_05">
+      <origin xyz="0.004 0.016 -0.028" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link28_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_06">
+      <origin xyz="-0.001 0.014 -0.0405" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_06">
+      <origin xyz="-0.001 0.014 -0.0405" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link28_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_07">
+      <origin xyz="-0.006 0.012 -0.053" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_07">
+      <origin xyz="-0.006 0.012 -0.053" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.02" />
+      </geometry>
+      <material name="right_link28_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_08">
+      <origin xyz="-0.018 0.044 -0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_08">
+      <origin xyz="-0.018 0.044 -0.018" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+      <material name="right_link28_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
+      </material>
+    </visual>
+    <collision name="collision_sphere_09">
+      <origin xyz="-0.019 0.066 -0.021" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+    </collision>
+    <visual name="collision_sphere_visual_09">
+      <origin xyz="-0.019 0.066 -0.021" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+      <material name="right_link28_collision_sphere">
+        <color rgba="1.0 0.3 0.75 0.38" />
       </material>
     </visual>
   </link>

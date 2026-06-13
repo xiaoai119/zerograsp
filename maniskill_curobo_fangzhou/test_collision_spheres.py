@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-from .urdf_adapter import ensure_collision_sphere_urdf, load_collision_spheres
+from .urdf_adapter import (
+    ensure_collision_sphere_urdf,
+    expand_collision_sphere_entry,
+    is_collision_sphere_visible,
+    load_collision_sphere_config,
+    load_collision_spheres,
+)
 
 
 def test_collision_spheres_match_generated_urdf() -> None:
@@ -23,7 +29,13 @@ def test_collision_spheres_match_generated_urdf() -> None:
 
 
 def test_debug_urdf_has_one_visual_per_collision_sphere() -> None:
-    expected_count = sum(len(items) for items in load_collision_spheres().values())
+    config = load_collision_sphere_config()
+    styles = config.get("collision_sphere_styles", {})
+    expected_count = sum(
+        len(items)
+        for link_name, items in load_collision_spheres().items()
+        if is_collision_sphere_visible(link_name, styles=styles)
+    )
     root = ET.parse(
         ensure_collision_sphere_urdf(show_spheres=True)
     ).getroot()
@@ -33,3 +45,24 @@ def test_debug_urdf_has_one_visual_per_collision_sphere() -> None:
         if visual.get("name", "").startswith("collision_sphere_visual_")
     ]
     assert len(debug_visuals) == expected_count
+
+
+def test_line_collision_sphere_spec_expands_to_straight_chain() -> None:
+    spheres = expand_collision_sphere_entry(
+        "test_link",
+        {
+            "line": {
+                "start": [0.0, 0.0, 0.0],
+                "end": [0.3, 0.0, 0.0],
+                "count": 4,
+                "radius": [0.01, 0.04],
+            }
+        },
+    )
+
+    assert spheres == [
+        {"center": [0.0, 0.0, 0.0], "radius": 0.01},
+        {"center": [0.1, 0.0, 0.0], "radius": 0.02},
+        {"center": [0.2, 0.0, 0.0], "radius": 0.03},
+        {"center": [0.3, 0.0, 0.0], "radius": 0.04},
+    ]
