@@ -54,7 +54,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--settle-steps", type=int, default=20)
     parser.add_argument(
         "--camera-frame",
-        choices=("robot", "world"),
+        choices=(DEFAULT_CAMERA_FRAME, "robot", "world"),
         default=DEFAULT_CAMERA_FRAME,
     )
     parser.add_argument("--camera-eye", type=float, nargs=3, default=list(DEFAULT_CAMERA_EYE))

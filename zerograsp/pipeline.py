@@ -9,11 +9,14 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from typing import Optional
+import importlib.util
+from pathlib import Path
+import sys
+import types
 
 import numpy as np
 import torch as th
 import torch.nn.functional as F
-from graspnetAPI import GraspGroup
 
 from main import BaseTrainer
 from zerograsp.utils.array_bridge import numpy_to_torch, torch_to_numpy
@@ -26,6 +29,36 @@ from zerograsp.utils.config import parse_config
 from zerograsp.utils.dataset import fetch_data, make_batch_from_arrays
 from zerograsp.utils.math import rotation_6d_to_matrix, unnormalize_pts
 from zerograsp.nets.utils import get_xyz_from_octree
+
+
+def _load_grasp_group_class():
+    try:
+        from graspnetAPI import GraspGroup as api_grasp_group
+
+        return api_grasp_group
+    except ModuleNotFoundError:
+        spec = importlib.util.find_spec("graspnetAPI")
+        if spec is None or not spec.submodule_search_locations:
+            raise
+        package_dir = Path(next(iter(spec.submodule_search_locations)))
+        package = types.ModuleType("graspnetAPI")
+        package.__path__ = [str(package_dir)]
+        package.__package__ = "graspnetAPI"
+        sys.modules["graspnetAPI"] = package
+        grasp_spec = importlib.util.spec_from_file_location(
+            "graspnetAPI.grasp",
+            package_dir / "grasp.py",
+        )
+        if grasp_spec is None or grasp_spec.loader is None:
+            raise
+        grasp_module = importlib.util.module_from_spec(grasp_spec)
+        sys.modules["graspnetAPI.grasp"] = grasp_module
+        grasp_spec.loader.exec_module(grasp_module)
+        package.GraspGroup = grasp_module.GraspGroup
+        return grasp_module.GraspGroup
+
+
+GraspGroup = _load_grasp_group_class()
 
 
 @dataclass

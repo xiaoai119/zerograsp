@@ -2,64 +2,19 @@
 
 from __future__ import annotations
 
-import numpy as np
+import math
+
 import sapien
 
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.registration import register_agent
+from mani_skill.sensors.camera import CameraConfig
 
-from .urdf_adapter import ensure_collision_sphere_urdf, ensure_visual_urdf
-
-
-LIFT2_JOINT_NAMES = (
-    "joint1",
-    "joint2",
-    "joint3",
-    "joint4",
-    "left_joint11",
-    "right_joint21",
-    "left_joint12",
-    "right_joint22",
-    "left_joint13",
-    "right_joint23",
-    "left_joint14",
-    "right_joint24",
-    "left_joint15",
-    "right_joint25",
-    "left_joint16",
-    "right_joint26",
-    "left_joint17",
-    "left_joint18",
-    "right_joint27",
-    "right_joint28",
-)
-
-# Wheels stay at zero, the lift is raised, both arms are mildly folded, and
-# both grippers are open. Values follow the limits in lift2.urdf.
-LIFT2_REST_QPOS = np.array(
-    [
-        0.0,
-        0.0,
-        0.0,
-        0.46,
-        0.0,
-        0.0,
-        1.20,
-        1.20,
-        1.80,
-        1.80,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.03,
-        0.03,
-        0.03,
-        0.03,
-    ],
-    dtype=np.float32,
+from .lift2_constants import LIFT2_HEAD_CAMERA_LINK, LIFT2_JOINT_NAMES, LIFT2_REST_QPOS
+from .urdf_adapter import (
+    ensure_collision_sphere_urdf,
+    ensure_full_collision_urdf,
+    ensure_visual_urdf,
 )
 
 
@@ -76,6 +31,21 @@ class Lift2Visual(BaseAgent):
         "rest": Keyframe(qpos=LIFT2_REST_QPOS, pose=sapien.Pose()),
     }
 
+    @property
+    def _sensor_configs(self):
+        return [
+            CameraConfig(
+                uid="base_camera",
+                pose=sapien.Pose(),
+                width=128,
+                height=128,
+                fov=math.pi / 2,
+                near=0.01,
+                far=100,
+                entity_uid=LIFT2_HEAD_CAMERA_LINK,
+            )
+        ]
+
 
 @register_agent()
 class Lift2CollisionSpheres(Lift2Visual):
@@ -83,6 +53,14 @@ class Lift2CollisionSpheres(Lift2Visual):
 
     uid = "lift2_collision_spheres"
     urdf_path = str(ensure_collision_sphere_urdf())
+
+
+@register_agent()
+class Lift2FullCollision(Lift2Visual):
+    """Lift2 with the original URDF mesh collisions for physics contacts."""
+
+    uid = "lift2_full_collision"
+    urdf_path = str(ensure_full_collision_urdf())
 
 
 @register_agent()

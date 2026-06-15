@@ -16,7 +16,7 @@ from PIL import Image
 
 from mani_skill.utils import sapien_utils
 
-from .lift2_agent import LIFT2_JOINT_NAMES, LIFT2_REST_QPOS
+from .lift2_constants import LIFT2_JOINT_NAMES, LIFT2_REST_QPOS
 from .render_lift2_seed import PickClutterYCBLift2Env  # noqa: F401
 
 

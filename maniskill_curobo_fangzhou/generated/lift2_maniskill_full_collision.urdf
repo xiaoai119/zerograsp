@@ -15,6 +15,12 @@
         <color rgba="0.69804 0.69804 0.69804 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/base_link.STL" />
+      </geometry>
+    </collision>
   </link>
   <link name="wheel1">
     <inertial>
@@ -31,6 +37,12 @@
         <color rgba="0.69804 0.69804 0.69804 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel1.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="joint1" type="continuous">
     <origin xyz="0.15361 0.29246 -0.093" rpy="0 0 1.0472" />
@@ -54,6 +66,12 @@
         <color rgba="0.69804 0.69804 0.69804 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel2.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="joint2" type="continuous">
     <origin xyz="0.15361 -0.29245 -0.093" rpy="0 0 -1.0472" />
@@ -77,6 +95,12 @@
         <color rgba="0.89804 0.91765 0.92941 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel3.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="joint3" type="continuous">
     <origin xyz="-0.35293 0 -0.093" rpy="0 0 0" />
@@ -100,6 +124,12 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/body4.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="joint4" type="prismatic">
     <origin xyz="0.094118 0.0010067 0.27" rpy="0 0 0" />
@@ -123,6 +153,12 @@
         <color rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link11.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint11" type="revolute">
     <origin xyz="0.059949 0.25 0.0245" rpy="0 0 0" />
@@ -146,6 +182,12 @@
         <color rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link12.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint12" type="revolute">
     <origin xyz="0.02 0 0.04" rpy="0 0 0" />
@@ -169,6 +211,12 @@
         <color rgba="1 0.98431 0.96471 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link13.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint13" type="revolute">
     <origin xyz="-0.264 3E-05 0" rpy="0 0 0" />
@@ -192,6 +240,12 @@
         <color rgba="0.79216 0.81961 0.92941 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link14.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint14" type="revolute">
     <origin xyz="0.245 -3E-05 0.056" rpy="0 0 0" />
@@ -215,6 +269,12 @@
         <color rgba="0.69804 0.69804 0.69804 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link15.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint15" type="revolute">
     <origin xyz="0.06775 0 0.0845" rpy="0 0 0" />
@@ -238,6 +298,12 @@
         <color rgba="0.89804 0.91765 0.92941 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link16.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint16" type="revolute">
     <origin xyz="0.02895 0 -0.0845" rpy="0 0 0" />
@@ -261,6 +327,12 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link17.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint17" type="prismatic">
     <origin xyz="0.08397 0.02721 -0.0062702" rpy="0 0 0" />
@@ -284,6 +356,12 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link18.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="left_joint18" type="prismatic">
     <origin xyz="0.08397 -0.023638 -0.0062703" rpy="0 0 0" />
@@ -307,6 +385,12 @@
         <color rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link21.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint21" type="revolute">
     <origin xyz="0.059949 -0.25 0.0245" rpy="0 0 0" />
@@ -330,6 +414,12 @@
         <color rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link22.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint22" type="revolute">
     <origin xyz="0.02 0 0.04" rpy="0 0 0" />
@@ -353,6 +443,12 @@
         <color rgba="1 0.98431 0.96471 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link23.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint23" type="revolute">
     <origin xyz="-0.264 3E-05 0" rpy="0 0 0" />
@@ -376,6 +472,12 @@
         <color rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link24.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint24" type="revolute">
     <origin xyz="0.245 -3E-05 0.056" rpy="0 0 0" />
@@ -399,6 +501,12 @@
         <color rgba="0.69804 0.69804 0.69804 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link25.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint25" type="revolute">
     <origin xyz="0.06775 0 0.0845" rpy="0 0 0" />
@@ -422,6 +530,12 @@
         <color rgba="0.89804 0.91765 0.92941 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link26.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint26" type="revolute">
     <origin xyz="0.02895 0 -0.0845" rpy="0 0 0" />
@@ -445,6 +559,12 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link27.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint27" type="prismatic">
     <origin xyz="0.08397 0.02721 -0.0062702" rpy="0 0 0" />
@@ -468,6 +588,12 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link28.STL" />
+      </geometry>
+    </collision>
   </link>
   <joint name="right_joint28" type="prismatic">
     <origin xyz="0.08397 -0.023638 -0.0062703" rpy="0 0 0" />
@@ -475,6 +601,12 @@
     <child link="right_link28" />
     <axis xyz="0 -1 0" />
     <limit lower="0" upper="0.044" effort="300" velocity="0.053" />
+  </joint>
+  <link name="right_tcp" />
+  <joint name="right_tcp_fixed_joint" type="fixed">
+    <parent link="right_link26" />
+    <child link="right_tcp" />
+    <origin xyz="0.14496999979019165 0.0017859999788925052 0.0" rpy="0.0 0.0 0.0" />
   </joint>
   <link name="head_camera_link" />
   <joint name="head_camera_fixed_joint" type="fixed">

@@ -16,19 +16,24 @@ from transforms3d.euler import euler2quat
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.pick_clutter_ycb import PickClutterYCBEnv
+from mani_skill.envs.tasks.tabletop.pick_single_ycb import PickSingleYCBEnv
 from mani_skill.sensors.camera import CameraConfig
+from mani_skill.envs.utils.randomization.pose import random_quaternions
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
+from mani_skill.utils.structs.pose import Pose
 
 from .lift2_agent import LIFT2_JOINT_NAMES, LIFT2_REST_QPOS
 from .urdf_adapter import load_collision_spheres
 
 
 # Lift2 faces the table from the positive-X side. After the 180-degree yaw,
-# its base extends 0.2180664 m toward negative X. The table edge is
-# x=0.4688596, so x=0.7069260 leaves a 2 cm visual clearance.
+# its base extends 0.2180664 m toward negative X. The first placement at
+# x=0.7069260 left only a narrow visual clearance and the full mesh collision
+# base/wheels penetrated the table workspace. Move the root 8 cm backward
+# (positive world X) so full-collision execution starts without table contact.
 LIFT2_ROOT_POSE = sapien.Pose(
-    p=[0.7069260, 0.0, -0.7516],
+    p=[0.7869260, 0.0, -0.7516],
     q=euler2quat(0.0, 0.0, np.pi),
 )
 
@@ -43,6 +48,7 @@ class PickClutterYCBLift2Env(PickClutterYCBEnv):
 
     SUPPORTED_ROBOTS = [
         "lift2_visual",
+        "lift2_full_collision",
         "lift2_collision_spheres",
         "lift2_collision_spheres_debug",
     ]
@@ -75,6 +81,103 @@ class PickClutterYCBLift2Env(PickClutterYCBEnv):
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         super()._initialize_episode(env_idx, options)
+        qpos = np.repeat(LIFT2_REST_QPOS[None, :], len(env_idx), axis=0)
+        self.agent.reset(qpos)
+        self.agent.robot.set_pose(LIFT2_ROOT_POSE)
+
+
+@register_env(
+    "PickSingleYCBLift2-v1",
+    asset_download_ids=["ycb"],
+    max_episode_steps=100,
+)
+class PickSingleYCBLift2Env(PickSingleYCBEnv):
+    """PickSingle scene specialized only enough to place and render Lift2."""
+
+    SUPPORTED_ROBOTS = PickClutterYCBLift2Env.SUPPORTED_ROBOTS
+
+    def __init__(self, *args: Any, robot_uids: str = "lift2_visual", **kwargs: Any):
+        super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=0.0, **kwargs)
+
+    @property
+    def _default_human_render_camera_configs(self) -> CameraConfig:
+        pose = sapien_utils.look_at(
+            eye=[1.25, 1.35, 0.95],
+            target=[-0.35, 0.0, -0.10],
+        )
+        return CameraConfig(
+            "render_camera",
+            pose=pose,
+            width=960,
+            height=720,
+            fov=1.0,
+            near=0.01,
+            far=100,
+        )
+
+    def _load_agent(self, options: dict):
+        BaseEnv._load_agent(
+            self,
+            options,
+            LIFT2_ROOT_POSE,
+        )
+
+    def evaluate(self):
+        """Lift2 does not implement ManiSkill's Panda-style is_grasping hook."""
+        return {
+            "success": torch.zeros(self.num_envs, dtype=torch.bool, device=self.device),
+            "is_grasped": torch.zeros(self.num_envs, dtype=torch.bool, device=self.device),
+        }
+
+    def _get_obs_extra(self, info: dict):
+        tcp_pose = self._right_tcp_raw_pose()
+        tcp_pos = tcp_pose[:, :3]
+        obs = {
+            "tcp_pose": tcp_pose,
+            "goal_pos": self.goal_site.pose.p,
+            "is_grasped": info["is_grasped"],
+        }
+        if "state" in self.obs_mode:
+            obs.update(
+                tcp_to_goal_pos=self.goal_site.pose.p - tcp_pos,
+                obj_pose=self.obj.pose.raw_pose,
+                tcp_to_obj_pos=self.obj.pose.p - tcp_pos,
+                obj_to_goal_pos=self.goal_site.pose.p - self.obj.pose.p,
+            )
+        return obs
+
+    def _right_tcp_raw_pose(self) -> torch.Tensor:
+        for link in self.agent.robot.get_links():
+            if str(link.name) != "right_tcp":
+                continue
+            raw_pose = getattr(link.pose, "raw_pose", None)
+            if raw_pose is not None:
+                return raw_pose
+        fallback = torch.zeros((self.num_envs, 7), device=self.device)
+        fallback[:, 3] = 1.0
+        return fallback
+
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
+        return torch.zeros(self.num_envs, dtype=torch.float32, device=self.device)
+
+    def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
+        return torch.zeros(self.num_envs, dtype=torch.float32, device=self.device)
+
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        with torch.device(self.device):
+            b = len(env_idx)
+            self.table_scene.initialize(env_idx)
+            xyz = torch.zeros((b, 3))
+            xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
+            xyz[:, 2] = self.object_zs[env_idx]
+            qs = random_quaternions(b, lock_x=True, lock_y=True)
+            self.obj.set_pose(Pose.create_from_pq(p=xyz, q=qs))
+
+            goal_xyz = torch.zeros((b, 3))
+            goal_xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
+            goal_xyz[:, 2] = torch.rand((b)) * 0.3 + xyz[:, 2]
+            self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
+
         qpos = np.repeat(LIFT2_REST_QPOS[None, :], len(env_idx), axis=0)
         self.agent.reset(qpos)
         self.agent.robot.set_pose(LIFT2_ROOT_POSE)

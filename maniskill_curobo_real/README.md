@@ -627,7 +627,7 @@ world model 带来了多少成功率变化和额外耗时。
 - M4-C 若出现全失败，先用已知障碍物做 ESDF 正负号测试，不直接归因于规划器。
 - 只有在同 candidate、同抓取深度、同 workspace、同执行参数下才比较性能衰减。
 
-#### M4 seed1-200 实测结果
+#### M0/M3/M4 seed1-200 实测结果
 
 完成日期：2026-06-12。
 
@@ -635,25 +635,29 @@ world model 带来了多少成功率变化和额外耗时。
 cuRobo planner 和 `update_world` 方式重新运行。优化后的 M3 仍然得到与历史正式
 基线完全相同的 `101/197` 次 lift 成功，因此没有改变成功率基线。
 
-三个版本与 M3 都使用同一批 ZeroGrasp full-depth top-k 候选、相同 depth fallback、
-相机、settle steps、workspace 和执行参数。seed `1、40、169` 缺少可复用的
-ZeroGrasp candidate，因此每个版本实际完成 `197/200`。
+M0 是 ManiSkill 仿真真值碰撞世界 baseline。M0、M3 和三个 M4 版本都使用同一批
+ZeroGrasp full-depth top-k 候选、相同 depth fallback、相机、settle steps、
+workspace 和执行参数。seed `1、40、169` 缺少可复用的 ZeroGrasp candidate，
+因此每个版本实际完成 `197/200`。
 
 | 版本 | 碰撞表达 | Lift 成功 | 相对 M3 | 改善 / 退化 seed | 端到端平均耗时 | 相对 M3 耗时 |
 |---|---|---:|---:|---:|---:|---:|
+| M0 | ManiSkill truth collision | `94/197 = 47.72%` | `-3.55 pp` | - | `6.40 s` | `0.79x` |
 | M3 | instance AABB | `101/197 = 51.27%` | baseline | - | `8.13 s` | `1.00x` |
 | M4-A | yaw OBB | `103/197 = 52.28%` | `+1.02 pp` | `8 / 6` | `7.81 s` | `0.96x` |
 | M4-B | convex hull mesh | `8/197 = 4.06%` | `-47.21 pp` | `0 / 93` | `16.01 s` | `1.97x` |
 | M4-C | 10 mm voxel ESDF | `111/197 = 56.35%` | `+5.08 pp` | `20 / 10` | `7.75 s` | `0.95x` |
 
-这里的端到端耗时包含该 seed 的点云碰撞世界构建和抓取规划/执行，不包含已经
-离线复用的 ZeroGrasp 推理。平均耗时也会受失败类型影响：M4-B 经常依次测试
-top-20 候选后才宣布失败，因此既慢又没有执行抓取。
+这里的端到端耗时包含该 seed 的碰撞世界构建和抓取规划/执行，不包含已经
+离线复用的 ZeroGrasp 推理。M0 不需要构建点云 world，因此比 M3/M4 更快。
+平均耗时也会受失败类型影响：M4-B 经常依次测试 top-20 候选后才宣布失败，
+因此既慢又没有执行抓取。
 
 失败分布：
 
 | 版本 | Candidate selection failed | Grasp planning failed | Lift planning failed | Object not lifted | Execution failed |
 |---|---:|---:|---:|---:|---:|
+| M0 | 39 | 2 | 0 | 44 | 18 |
 | M3 | 49 | 2 | 0 | 44 | 1 |
 | M4-A | 47 | 0 | 0 | 46 | 1 |
 | M4-B | 184 | 1 | 0 | 3 | 1 |
@@ -661,6 +665,10 @@ top-20 候选后才宣布失败，因此既慢又没有执行抓取。
 
 结论：
 
+- **M0 不是当前成功率上限。** ManiSkill 真值碰撞世界在这批候选上只有
+  `94/197 = 47.72%`，低于 M3/M4-C。原因是 M0 对仿真真值碰撞更硬，
+  candidate selection 和 execution failed 更多；更真实的碰撞世界不一定给
+  当前 ZeroGrasp 候选带来更高执行成功率。
 - **M4-C 是当前最好的 M4 版本。** 它把 lift 成功率从 `51.27%` 提高到
   `56.35%`，净增加 10 个成功 seed，端到端耗时没有衰减。
 - **M4-A 可以作为低风险 fallback。** 它保持 cuboid 查询，成功率小幅提升，

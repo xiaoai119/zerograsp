@@ -18,17 +18,20 @@ from maniskill_codex.zerograsp_inputs import (
     save_zerograsp_input_bundle,
 )
 
+from .lift2_constants import (
+    LIFT2_HEAD_CAMERA_EYE_BASE,
+    LIFT2_HEAD_CAMERA_LINK,
+    LIFT2_HEAD_CAMERA_TARGET_BASE,
+)
 from .lift2_agent import LIFT2_REST_QPOS
 from .render_lift2_seed import LIFT2_ROOT_POSE, PickClutterYCBLift2Env  # noqa: F401
 
 
-# Lift2's head camera is fixed in the robot frame, not the world frame. The
-# current viewpoint is 0.3 m in front of the root and 1.1716 m above the URDF
-# root. Because the robot is yaw-rotated by pi in the scene, this resolves to
-# world eye [0.406926, 0.0, 0.42] for the current seed1 placement.
-DEFAULT_CAMERA_FRAME = "robot"
-DEFAULT_CAMERA_EYE = (0.300000, 0.0, 1.171600)
-DEFAULT_CAMERA_TARGET = (0.656926, 0.0, 0.831600)
+# Lift2's ZeroGrasp RGB-D camera is mounted to a virtual head_camera_link that
+# is fixed to base_link at the RS01-like camera housing baked into base_link.STL.
+DEFAULT_CAMERA_FRAME = LIFT2_HEAD_CAMERA_LINK
+DEFAULT_CAMERA_EYE = tuple(float(v) for v in LIFT2_HEAD_CAMERA_EYE_BASE)
+DEFAULT_CAMERA_TARGET = tuple(float(v) for v in LIFT2_HEAD_CAMERA_TARGET_BASE)
 
 
 def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
@@ -46,11 +49,11 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--settle-steps", type=int, default=20)
     parser.add_argument(
         "--camera-frame",
-        choices=("robot", "world"),
+        choices=(LIFT2_HEAD_CAMERA_LINK, "robot", "world"),
         default=DEFAULT_CAMERA_FRAME,
         help=(
-            "Coordinate frame for --camera-eye/--camera-target. The default "
-            "keeps the head camera fixed in Lift2's local robot frame."
+            "Coordinate frame for --camera-eye/--camera-target. The default uses "
+            "the robot-mounted head_camera_link. robot/world are debug overrides."
         ),
     )
     parser.add_argument("--camera-eye", type=float, nargs=3, default=list(DEFAULT_CAMERA_EYE))
@@ -101,6 +104,11 @@ def main(argv: Iterable[str] | None = None) -> int:
             "camera_frame": args.camera_frame,
             "camera_eye": list(args.camera_eye),
             "camera_target": list(args.camera_target),
+            "camera_mount_link": (
+                LIFT2_HEAD_CAMERA_LINK
+                if args.camera_frame == LIFT2_HEAD_CAMERA_LINK
+                else None
+            ),
             "camera_eye_world": camera_eye_world.tolist(),
             "camera_target_world": camera_target_world.tolist(),
             "lift2_root_pose": {
@@ -131,17 +139,19 @@ def build_env(args: argparse.Namespace):
     from mani_skill.render import PREBUILT_SHADER_CONFIGS, set_shader_pack
     from mani_skill.utils import sapien_utils
 
-    camera_eye_world, camera_target_world = resolve_camera_eye_target(args)
     set_shader_pack(PREBUILT_SHADER_CONFIGS["minimal"])
     sensor_configs = {
         "width": args.width,
         "height": args.height,
         "shader_pack": "minimal",
-        args.camera: {
-            "pose": sapien_utils.look_at(camera_eye_world.tolist(), camera_target_world.tolist()),
-            "shader_pack": "minimal",
-        },
     }
+    if args.camera_frame != LIFT2_HEAD_CAMERA_LINK:
+        camera_eye_world, camera_target_world = resolve_camera_eye_target(args)
+        sensor_configs[args.camera] = {
+            "pose": sapien_utils.look_at(camera_eye_world.tolist(), camera_target_world.tolist()),
+            "entity_uid": None,
+            "shader_pack": "minimal",
+        }
     return gym.make(
         args.env_id,
         robot_uids=args.robot_uid,
@@ -163,6 +173,9 @@ def resolve_camera_eye_target(args: argparse.Namespace) -> tuple[np.ndarray, np.
     target = np.asarray(args.camera_target, dtype=np.float64).reshape(3)
     if args.camera_frame == "world":
         return eye, target
+    if args.camera_frame == LIFT2_HEAD_CAMERA_LINK:
+        eye = np.asarray(LIFT2_HEAD_CAMERA_EYE_BASE, dtype=np.float64).reshape(3)
+        target = np.asarray(LIFT2_HEAD_CAMERA_TARGET_BASE, dtype=np.float64).reshape(3)
     root_p = np.asarray(LIFT2_ROOT_POSE.p, dtype=np.float64).reshape(3)
     root_q = np.asarray(LIFT2_ROOT_POSE.q, dtype=np.float64).reshape(4)
     root_R = quat2mat(root_q)

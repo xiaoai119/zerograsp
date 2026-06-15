@@ -1,0 +1,53 @@
+{
+  "config": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/config/lift2_right_arm_fixed_lift_curobo.yml",
+  "urdf_path": "/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/generated/lift2_maniskill_visual.urdf",
+  "base_link": "base_link",
+  "tool_frames": [
+    "right_tcp"
+  ],
+  "planned_joint_names": [
+    "right_joint21",
+    "right_joint22",
+    "right_joint23",
+    "right_joint24",
+    "right_joint25",
+    "right_joint26"
+  ],
+  "locked_joint_names": [
+    "joint4",
+    "right_joint27",
+    "right_joint28"
+  ],
+  "fixed_lift": true,
+  "fixed_lift_joint_value": 0.46,
+  "right_gripper_joint_names": [
+    "right_joint27",
+    "right_joint28"
+  ],
+  "collision_link_names": [
+    "right_link21",
+    "right_link22",
+    "right_link23",
+    "right_link24",
+    "right_link25",
+    "right_link26",
+    "right_link27",
+    "right_link28"
+  ],
+  "tcp": {
+    "parent_link": "right_link26",
+    "link": "right_tcp",
+    "xyz": [
+      0.14496999979019165,
+      0.0017859999788925052,
+      0.0
+    ],
+    "quat_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "note": "Midpoint of both finger meshes at the section 1 cm behind the tips."
+  }
+}

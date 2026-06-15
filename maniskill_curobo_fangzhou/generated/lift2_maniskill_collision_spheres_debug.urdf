@@ -1700,4 +1700,16 @@
     <axis xyz="0 -1 0" />
     <limit lower="0" upper="0.044" effort="300" velocity="0.053" />
   </joint>
+  <link name="right_tcp" />
+  <joint name="right_tcp_fixed_joint" type="fixed">
+    <parent link="right_link26" />
+    <child link="right_tcp" />
+    <origin xyz="0.14496999979019165 0.0017859999788925052 0.0" rpy="0.0 0.0 0.0" />
+  </joint>
+  <link name="head_camera_link" />
+  <joint name="head_camera_fixed_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="head_camera_link" />
+    <origin xyz="0.30000001192092896 0.0 1.041599988937378" rpy="0.0 0.7611162950495652 0.0" />
+  </joint>
 </robot>

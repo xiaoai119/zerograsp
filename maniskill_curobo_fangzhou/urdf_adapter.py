@@ -6,13 +6,29 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+from transforms3d.euler import mat2euler
 import yaml
+
+from .lift2_constants import (
+    LIFT2_HEAD_CAMERA_EYE_BASE,
+    LIFT2_HEAD_CAMERA_JOINT,
+    LIFT2_HEAD_CAMERA_LINK,
+    LIFT2_HEAD_CAMERA_PARENT_LINK,
+    LIFT2_HEAD_CAMERA_TARGET_BASE,
+    LIFT2_RIGHT_TCP_JOINT,
+    LIFT2_RIGHT_TCP_LINK,
+    LIFT2_RIGHT_TCP_PARENT_LINK,
+    LIFT2_RIGHT_TCP_RPY_RIGHT_LINK26,
+    LIFT2_RIGHT_TCP_XYZ_RIGHT_LINK26,
+)
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 SOURCE_URDF = PACKAGE_ROOT / "urdf" / "lift2" / "urdf" / "lift2.urdf"
 GENERATED_DIR = PACKAGE_ROOT / "generated"
 VISUAL_URDF = GENERATED_DIR / "lift2_maniskill_visual.urdf"
+FULL_COLLISION_URDF = GENERATED_DIR / "lift2_maniskill_full_collision.urdf"
 COLLISION_SPHERES = GENERATED_DIR / "lift2_collision_spheres.yml"
 COLLISION_URDF = GENERATED_DIR / "lift2_maniskill_collision_spheres.urdf"
 COLLISION_DEBUG_URDF = (
@@ -20,7 +36,7 @@ COLLISION_DEBUG_URDF = (
 )
 
 
-def _load_adapted_tree() -> ET.ElementTree:
+def _load_adapted_tree(*, strip_collisions: bool = True) -> ET.ElementTree:
     tree = ET.parse(SOURCE_URDF)
     root = tree.getroot()
     mesh_root = PACKAGE_ROOT / "urdf" / "lift2" / "meshes"
@@ -31,9 +47,10 @@ def _load_adapted_tree() -> ET.ElementTree:
             mesh_name = filename.removeprefix("package://lift2/meshes/")
             mesh.set("filename", str((mesh_root / mesh_name).resolve()))
 
-    for link in root.findall("link"):
-        for collision in list(link.findall("collision")):
-            link.remove(collision)
+    if strip_collisions:
+        for link in root.findall("link"):
+            for collision in list(link.findall("collision")):
+                link.remove(collision)
     return tree
 
 
@@ -44,15 +61,106 @@ def _write_tree(tree: ET.ElementTree, output_path: Path) -> Path:
     return output_path
 
 
+def _add_right_tcp_link(tree: ET.ElementTree) -> None:
+    """Add the execution-side fixed TCP link used by the cuRobo config.
+
+    The source URDF has gripper links but no explicit TCP link.  cuRobo adds
+    ``right_tcp`` as an extra link in its kinematic config, while ManiSkill
+    would otherwise only expose ``right_link26``/finger links.  Add the same
+    fixed link to ManiSkill execution URDFs so target tracking diagnostics use
+    the same frame as the planner.
+    """
+
+    root = tree.getroot()
+    if root.find(f"./link[@name='{LIFT2_RIGHT_TCP_LINK}']") is not None:
+        return
+    if root.find(f"./link[@name='{LIFT2_RIGHT_TCP_PARENT_LINK}']") is None:
+        raise RuntimeError(f"Missing TCP parent link: {LIFT2_RIGHT_TCP_PARENT_LINK}")
+
+    ET.SubElement(root, "link", {"name": LIFT2_RIGHT_TCP_LINK})
+    joint = ET.SubElement(root, "joint", {"name": LIFT2_RIGHT_TCP_JOINT, "type": "fixed"})
+    ET.SubElement(joint, "parent", {"link": LIFT2_RIGHT_TCP_PARENT_LINK})
+    ET.SubElement(joint, "child", {"link": LIFT2_RIGHT_TCP_LINK})
+    ET.SubElement(
+        joint,
+        "origin",
+        {
+            "xyz": " ".join(str(float(v)) for v in LIFT2_RIGHT_TCP_XYZ_RIGHT_LINK26),
+            "rpy": " ".join(str(float(v)) for v in LIFT2_RIGHT_TCP_RPY_RIGHT_LINK26),
+        },
+    )
+
+
+def _head_camera_rpy_base() -> tuple[float, float, float]:
+    """Return the SAPIEN look-at camera rotation as URDF fixed-joint RPY."""
+
+    eye = np.asarray(LIFT2_HEAD_CAMERA_EYE_BASE, dtype=np.float64).reshape(3)
+    target = np.asarray(LIFT2_HEAD_CAMERA_TARGET_BASE, dtype=np.float64).reshape(3)
+    forward = target - eye
+    forward /= np.linalg.norm(forward)
+    up_hint = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    left = np.cross(up_hint, forward)
+    left /= np.linalg.norm(left)
+    up = np.cross(forward, left)
+    rotation = np.stack([forward, left, up], axis=1)
+    return tuple(float(v) for v in mat2euler(rotation, axes="sxyz"))
+
+
+def _add_head_camera_link(tree: ET.ElementTree) -> None:
+    """Add the robot-mounted RGB-D camera frame used for ZeroGrasp input."""
+
+    root = tree.getroot()
+    if root.find(f"./link[@name='{LIFT2_HEAD_CAMERA_LINK}']") is not None:
+        return
+    if root.find(f"./link[@name='{LIFT2_HEAD_CAMERA_PARENT_LINK}']") is None:
+        raise RuntimeError(f"Missing head camera parent link: {LIFT2_HEAD_CAMERA_PARENT_LINK}")
+
+    ET.SubElement(root, "link", {"name": LIFT2_HEAD_CAMERA_LINK})
+    joint = ET.SubElement(root, "joint", {"name": LIFT2_HEAD_CAMERA_JOINT, "type": "fixed"})
+    ET.SubElement(joint, "parent", {"link": LIFT2_HEAD_CAMERA_PARENT_LINK})
+    ET.SubElement(joint, "child", {"link": LIFT2_HEAD_CAMERA_LINK})
+    ET.SubElement(
+        joint,
+        "origin",
+        {
+            "xyz": " ".join(str(float(v)) for v in LIFT2_HEAD_CAMERA_EYE_BASE),
+            "rpy": " ".join(str(v) for v in _head_camera_rpy_base()),
+        },
+    )
+
+
 def ensure_visual_urdf() -> Path:
     """Generate a collision-free URDF with filesystem-relative mesh paths."""
 
+    newest_input = max(
+        SOURCE_URDF.stat().st_mtime_ns,
+        Path(__file__).stat().st_mtime_ns,
+        (PACKAGE_ROOT / "lift2_constants.py").stat().st_mtime_ns,
+    )
     if (
         VISUAL_URDF.exists()
-        and VISUAL_URDF.stat().st_mtime_ns >= SOURCE_URDF.stat().st_mtime_ns
+        and VISUAL_URDF.stat().st_mtime_ns >= newest_input
     ):
         return VISUAL_URDF
-    return _write_tree(_load_adapted_tree(), VISUAL_URDF)
+    tree = _load_adapted_tree(strip_collisions=True)
+    _add_head_camera_link(tree)
+    return _write_tree(tree, VISUAL_URDF)
+
+
+def ensure_full_collision_urdf() -> Path:
+    """Generate a ManiSkill URDF with the original mesh collision geometry."""
+
+    newest_input = max(
+        SOURCE_URDF.stat().st_mtime_ns,
+        Path(__file__).stat().st_mtime_ns,
+        (PACKAGE_ROOT / "lift2_constants.py").stat().st_mtime_ns,
+    )
+    if FULL_COLLISION_URDF.exists() and FULL_COLLISION_URDF.stat().st_mtime_ns >= newest_input:
+        return FULL_COLLISION_URDF
+    tree = _load_adapted_tree(strip_collisions=False)
+    _add_right_tcp_link(tree)
+    _add_head_camera_link(tree)
+    return _write_tree(tree, FULL_COLLISION_URDF)
 
 
 def load_collision_spheres() -> dict[str, list[dict[str, object]]]:
@@ -77,11 +185,14 @@ def ensure_collision_sphere_urdf(*, show_spheres: bool = False) -> Path:
         SOURCE_URDF.stat().st_mtime_ns,
         COLLISION_SPHERES.stat().st_mtime_ns,
         Path(__file__).stat().st_mtime_ns,
+        (PACKAGE_ROOT / "lift2_constants.py").stat().st_mtime_ns,
     )
     if output_path.exists() and output_path.stat().st_mtime_ns >= newest_input:
         return output_path
 
-    tree = _load_adapted_tree()
+    tree = _load_adapted_tree(strip_collisions=True)
+    _add_right_tcp_link(tree)
+    _add_head_camera_link(tree)
     links = {link.get("name"): link for link in tree.getroot().findall("link")}
     sphere_config = load_collision_sphere_config()
     sphere_specs = normalize_collision_sphere_specs(sphere_config["collision_spheres"])
