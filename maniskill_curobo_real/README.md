@@ -148,7 +148,7 @@ ZeroGrasp 输出的是抓取几何意义上的 pose，cuRobo 执行的是 robot 
   - 将点云拟合成 cuboid 或 mesh。
   - 对非目标物体建近似碰撞体。
 - 完整版本：
-  - 使用 depth camera 构建 voxel / ESDF / nvblox world。
+  - 使用 depth camera 构建 voxel / ESDF world。
   - cuRobo 对 robot 与感知到的 3D 世界做碰撞检查。
 
 注意：
@@ -308,7 +308,7 @@ ZeroGrasp 输出的是抓取几何意义上的 pose，cuRobo 执行的是 robot 
 目标：
 
 - 不再只用固定桌面。
-- 用真实 depth 点云或 nvblox 建动态 collision world。
+- 用真实 depth 点云建动态 voxel / ESDF collision world。
 
 需要完成：
 
@@ -574,8 +574,8 @@ world model 带来了多少成功率变化和额外耗时。
    - 自由空间为正距离。
 5. 将 ESDF 作为 cuRobo `VoxelGrid`，桌面仍使用独立 cuboid。
 
-第一版使用单帧、10 mm voxel，目标是验证原生 cuRobo ESDF 链路。它还不是
-多帧 nvblox 地图；多帧融合和在线更新仍属于 M5。
+第一版使用单帧、10 mm voxel，目标是验证原生 cuRobo ESDF 链路。多视角
+实例融合属于 M5。
 
 预期：
 
@@ -678,8 +678,8 @@ workspace 和执行参数。seed `1、40、169` 缺少可复用的 ZeroGrasp can
   阶段失败。问题不是 mesh 文件损坏，而是闭合凸包作为硬碰撞体对贴近物体的抓取
   过于保守。
 - M4-C 仍使用 oracle instance segmentation 和单帧点云，不等于已经完成真机
-  感知迁移。下一步应把 instance 输入换成真实实例分割，并进入 M5 多帧
-  nvblox/ESDF 更新。
+  感知迁移。下一步应把 instance 输入换成真实实例分割，并进入 M5 多视角
+  实例融合 ESDF。
 
 #### 暂存分支：多帧 / 多视角融合 ESDF
 
@@ -854,40 +854,19 @@ ManiSkill depth 点云或 actor collision shape。
 - ManiSkill-vs-ZeroGrasp 逐 seed 比较：
   `runs/pickclutter_zerograsp_reconstruction_m3_m4abc_seed1_200/source_comparison`
 
-### M5：nvblox / ESDF 在线碰撞世界
+### M5：三视角实例融合 ESDF 碰撞世界
 
-这是完整版本。
+当前 M5-table 主线不使用 nvblox。它从三个近距离 RGB-D 视角取得实例点云，
+按同一 segmentation id 合并同一物体，排除抓取目标，再把每个非目标实例的
+闭合凸包体素化为 10 mm ESDF。桌子不参与点云融合，而是作为单独标定的 cuboid
+加入 cuRobo collision world。
 
-目标：
+当前仿真实现仍使用 ManiSkill oracle instance segmentation；真机部署时需要用
+真实实例分割和跨视角实例关联替换。PickClutter seed1-200 的正式结果为
+`108/197 = 54.82%` lift success，端到端平均耗时 `19.95 s/seed`。
 
-- 使用 depth camera 持续融合场景。
-- 建立 nvblox / ESDF collision world。
-- cuRobo 直接在动态更新的 3D world 中做碰撞查询。
-
-输入：
-
-- 连续 RGB-D / depth frames。
-- camera pose stream：
-  - 固定相机：固定 `T_base_camera`。
-  - eye-in-hand：机器人 FK + `T_ee_camera`。
-- target mask / target cloud exclusion。
-
-输出：
-
-- 在线更新的 nvblox / ESDF world。
-- cuRobo motion generation 使用该 world collision。
-
-优点：
-
-- 最接近真机长期可用形态。
-- 可以处理动态障碍物和复杂工作台。
-- 不再依赖物体 CAD 或精确 pose。
-
-缺点：
-
-- 工程成本最高。
-- 需要处理相机延迟、深度噪声、地图清理、目标物体排除。
-- 需要严格做安全验证。
+这条路线保留了物体级边界，比直接融合完整深度图得到的厚重障碍更紧凑。后续
+重点是实例分割、跨视角关联和相机外参误差，不再维护 nvblox 融合分支。
 
 验收：
 
@@ -922,7 +901,7 @@ ManiSkill depth 点云或 actor collision shape。
 长期再做 M4/M5：
 
 1. mesh / voxel world。
-2. nvblox / ESDF 在线更新。
+2. 多视角实例融合 ESDF 更新。
 3. 真机闭环安全验证。
 
 ## 第一版建议验收指标

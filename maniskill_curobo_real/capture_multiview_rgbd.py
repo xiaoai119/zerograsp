@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture close-range three-view RGB-D bundles for nvblox experiments."""
+"""Capture close-range three-view RGB-D bundles for M5 reconstruction."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed-end", type=int, default=20)
     parser.add_argument(
         "--output-root",
-        default="maniskill_curobo_real/runs/nvblox_multiview_rgbd",
+        default="maniskill_curobo_real/runs/m5_multiview_rgbd",
     )
     parser.add_argument("--camera", default="base_camera")
     parser.add_argument("--width", type=int, default=1280)
@@ -308,4 +308,3 @@ def write_json(path: Path, payload: dict) -> None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
