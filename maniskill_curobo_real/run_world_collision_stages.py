@@ -1150,11 +1150,15 @@ def load_planner_scene_model(scene_model: Any) -> Any:
             dtype=torch.float16,
             device="cuda:0",
         )
-        table = Cuboid(
-            name="real_table_static",
-            pose=payload["table_pose"].astype(float).tolist(),
-            dims=payload["table_dims"].astype(float).tolist(),
-        )
+        cuboids = []
+        if "table_pose" in payload and "table_dims" in payload:
+            cuboids.append(
+                Cuboid(
+                    name="real_table_static",
+                    pose=payload["table_pose"].astype(float).tolist(),
+                    dims=payload["table_dims"].astype(float).tolist(),
+                )
+            )
         voxel = VoxelGrid(
             name="m4c_workspace_esdf",
             pose=[
@@ -1169,7 +1173,7 @@ def load_planner_scene_model(scene_model: Any) -> Any:
             feature_tensor=feature,
             feature_dtype=torch.float16,
         )
-    return Scene(cuboid=[table], voxel=[voxel])
+    return Scene(cuboid=cuboids, voxel=[voxel])
 
 
 def planner_scene_family(scene_model: Any) -> str:
@@ -1321,14 +1325,19 @@ def manifest_outcome(manifest: dict[str, Any]) -> str:
 
 
 def find_candidate_output(candidate_root: Path, seed: int) -> Path | None:
-    candidates = [
-        candidate_root / f"seed{seed:03d}" / "setup" / "zg_output",
-        candidate_root / f"seed{seed:03d}_base" / "zg_output",
-        candidate_root / f"seed{seed:03d}" / "zg_output",
-        candidate_root / f"seed{seed:03d}" / "baseline" / "zg_output",
-        candidate_root / f"seed{seed:03d}" / "depth" / "zg_output",
-        candidate_root / f"seed{seed:03d}" / "corrected_depth" / "zg_output",
-    ]
+    seed_names = [f"seed{seed:03d}", f"seed{seed}"]
+    candidates = []
+    for seed_name in seed_names:
+        candidates.extend(
+            [
+                candidate_root / seed_name / "setup" / "zg_output",
+                candidate_root / f"{seed_name}_base" / "zg_output",
+                candidate_root / seed_name / "zg_output",
+                candidate_root / seed_name / "baseline" / "zg_output",
+                candidate_root / seed_name / "depth" / "zg_output",
+                candidate_root / seed_name / "corrected_depth" / "zg_output",
+            ]
+        )
     for path in candidates:
         if (path / "recommended_grasp_top1.json").is_file():
             return path
