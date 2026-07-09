@@ -31,6 +31,7 @@ ofe/cuda/*.so
 # Local configuration and editor files
 .env
 .env.*
+.DS_Store
 .vscode/
 .idea/
 *.swp
@@ -83,6 +84,7 @@ maniskill_curobo/batch_runs/
 maniskill_curobo/logs/
 maniskill_curobo/smoke_tests/
 maniskill_curobo/datasets/
+maniskill_curobo_fangzhou/runs/
 
 # Real-world collision model experiments
 maniskill_curobo_real/runs/
@@ -96,3 +98,4 @@ maniskill_curobo_graspnet/runs/
 # Local datasets and large generated training data
 datasets/
 data/
+unitree_model/

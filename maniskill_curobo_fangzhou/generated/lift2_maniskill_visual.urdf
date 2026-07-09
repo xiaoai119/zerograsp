@@ -9,7 +9,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/base_link.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/base_link.STL" />
       </geometry>
       <material name="">
         <color rgba="0.69804 0.69804 0.69804 1" />
@@ -25,7 +25,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel1.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel1.STL" />
       </geometry>
       <material name="">
         <color rgba="0.69804 0.69804 0.69804 1" />
@@ -48,7 +48,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel2.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel2.STL" />
       </geometry>
       <material name="">
         <color rgba="0.69804 0.69804 0.69804 1" />
@@ -71,7 +71,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel3.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/wheel3.STL" />
       </geometry>
       <material name="">
         <color rgba="0.89804 0.91765 0.92941 1" />
@@ -94,7 +94,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/body4.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/body4.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -117,7 +117,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link11.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link11.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -140,7 +140,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link12.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link12.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -163,7 +163,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link13.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link13.STL" />
       </geometry>
       <material name="">
         <color rgba="1 0.98431 0.96471 1" />
@@ -186,7 +186,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link14.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link14.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.92941 1" />
@@ -209,7 +209,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link15.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link15.STL" />
       </geometry>
       <material name="">
         <color rgba="0.69804 0.69804 0.69804 1" />
@@ -232,7 +232,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link16.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link16.STL" />
       </geometry>
       <material name="">
         <color rgba="0.89804 0.91765 0.92941 1" />
@@ -255,7 +255,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link17.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link17.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -278,7 +278,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link18.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/left_link18.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -301,7 +301,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link21.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link21.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -324,7 +324,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link22.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link22.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -347,7 +347,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link23.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link23.STL" />
       </geometry>
       <material name="">
         <color rgba="1 0.98431 0.96471 1" />
@@ -370,7 +370,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link24.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link24.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -393,7 +393,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link25.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link25.STL" />
       </geometry>
       <material name="">
         <color rgba="0.69804 0.69804 0.69804 1" />
@@ -416,7 +416,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link26.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link26.STL" />
       </geometry>
       <material name="">
         <color rgba="0.89804 0.91765 0.92941 1" />
@@ -439,7 +439,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link27.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link27.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -462,7 +462,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="/home/openclaw-server/projects/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link28.STL" />
+        <mesh filename="/home/xufangjin/workspace/zerograsp/maniskill_curobo_fangzhou/urdf/lift2/meshes/right_link28.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />

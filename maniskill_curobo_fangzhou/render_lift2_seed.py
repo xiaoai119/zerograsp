@@ -33,7 +33,7 @@ from .urdf_adapter import load_collision_spheres
 # base/wheels penetrated the table workspace. Move the root 8 cm backward
 # (positive world X) so full-collision execution starts without table contact.
 LIFT2_ROOT_POSE = sapien.Pose(
-    p=[0.7869260, 0.0, -0.7516],
+    p=[0.8869260, 0.0, -0.7516],
     q=euler2quat(0.0, 0.0, np.pi),
 )
 
