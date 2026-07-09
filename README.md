@@ -102,7 +102,8 @@ ZERO_GRASP_OUTPUT_ROOT=/path/to/runs \
 ./docker/run_full_pipeline_in_docker.sh \
   --run-name picksingle_seed42 \
   --env-id PickSingleYCB-v1 \
-  --seed 42
+  --seed 42 \
+  --approach-axis positive-x
 ```
 
 运行 PickClutterYCB：
@@ -112,10 +113,15 @@ ZERO_GRASP_OUTPUT_ROOT=/path/to/runs \
 ./docker/run_full_pipeline_in_docker.sh \
   --run-name pickclutter_seed42 \
   --env-id PickClutterYCB-v1 \
-  --seed 42
+  --seed 42 \
+  --approach-axis positive-x
 ```
 
 默认输入 mask 使用 `--mask-mode task-target`，也就是只把 ManiSkill 任务目标物体传给 ZeroGrasp，避免桌子、地面、机械臂或非目标物体进入抓取候选。想让 ZeroGrasp 在所有可见物体里自由选择时，改成 `--mask-mode all-objects`；旧的像素面积过滤方式保留为 `--mask-mode visible-area` 方便对比。
+
+Panda 执行链路建议显式传 `--approach-axis positive-x`。实测 `negative-x`
+会把某些推荐抓取的预抓取点算到工作区下界，导致执行器停在 `pre`
+阶段，视频里看起来几乎没有实际动作。
 
 容器会直接调用：
 
@@ -139,6 +145,7 @@ python -m maniskill_codex.run_full_pipeline --no-conda
 python -m maniskill_codex.run_full_pipeline \
   --env-id PickSingleYCB-v1 \
   --seed 42 \
+  --approach-axis positive-x \
   --rl-tune \
   --rl-iters 3 \
   --rl-population 8 \

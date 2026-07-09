@@ -80,8 +80,14 @@ environment for ZeroGrasp inference:
 PYTHONPATH=. python maniskill_curobo/scripts/run_full_pipeline.py \
   --env-id PickSingleYCB-v1 \
   --seed 1 \
-  --run-name picksingle_seed1_curobo_full
+  --run-name picksingle_seed1_curobo_full \
+  --approach-axis positive-x
 ```
+
+Keep `--approach-axis positive-x` explicit for Panda execution. With the
+opposite convention, some ZeroGrasp poses put the pre-grasp target at the
+workspace lower bound and the rollout can stop in the `pre` stage before
+descend/close/lift are attempted.
 
 The run folder contains:
 
