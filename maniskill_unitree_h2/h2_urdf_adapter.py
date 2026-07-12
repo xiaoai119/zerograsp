@@ -30,7 +30,7 @@ def ensure_upper_body_gripper_urdf() -> Path:
 
     insert_index = find_insert_index(root)
     root.insert(insert_index, mobile_base_link())
-    root.insert(insert_index + 1, fixed_joint("mobile_base_to_pelvis", "mobile_base_link", "pelvis", xyz="0 0 0.56"))
+    root.insert(insert_index + 1, fixed_joint("mobile_base_to_pelvis", "mobile_base_link", "pelvis", xyz="0 0 0.32"))
     for element in original_links + original_joints:
         root.append(element)
 
@@ -98,26 +98,26 @@ def find_insert_index(root: ET.Element) -> int:
 def mobile_base_link() -> ET.Element:
     link = ET.Element("link", {"name": "mobile_base_link"})
     inertial = ET.SubElement(link, "inertial")
-    ET.SubElement(inertial, "origin", {"xyz": "0 0 0.12", "rpy": "0 0 0"})
-    ET.SubElement(inertial, "mass", {"value": "18.0"})
+    ET.SubElement(inertial, "origin", {"xyz": "0 0 0.10", "rpy": "0 0 0"})
+    ET.SubElement(inertial, "mass", {"value": "10.0"})
     ET.SubElement(
         inertial,
         "inertia",
         {
-            "ixx": "0.45",
+            "ixx": "0.12",
             "ixy": "0",
             "ixz": "0",
-            "iyy": "0.45",
+            "iyy": "0.12",
             "iyz": "0",
-            "izz": "0.70",
+            "izz": "0.18",
         },
     )
-    add_box_visual(link, "0 0 0.22", "0.58 0.46 0.22", "0.18 0.18 0.20 1")
-    add_box_collision(link, "0 0 0.22", "0.58 0.46 0.22")
-    for y in ("0.29", "-0.29"):
-        for x in ("0.20", "-0.20"):
-            add_cylinder_visual(link, f"{x} {y} 0.09", "1.5708 0 0", "0.08", "0.06", "0.05 0.05 0.05 1")
-            add_cylinder_collision(link, f"{x} {y} 0.09", "1.5708 0 0", "0.08", "0.06")
+    add_box_visual(link, "0 0 0.13", "0.36 0.30 0.14", "0.16 0.16 0.18 1")
+    add_box_collision(link, "0 0 0.13", "0.36 0.30 0.14")
+    for y in ("0.18", "-0.18"):
+        for x in ("0.13", "-0.13"):
+            add_cylinder_visual(link, f"{x} {y} 0.055", "1.5708 0 0", "0.055", "0.035", "0.04 0.04 0.04 1")
+            add_cylinder_collision(link, f"{x} {y} 0.055", "1.5708 0 0", "0.055", "0.035")
     return link
 
 
@@ -133,24 +133,24 @@ def add_simple_gripper(root: ET.Element, side: str) -> None:
     add_box_visual(palm_link, "0.045 0 0", "0.09 0.07 0.055", "0.08 0.08 0.09 1")
     add_box_collision(palm_link, "0.045 0 0", "0.09 0.07 0.055")
     root.append(palm_link)
-    root.append(fixed_joint(f"{side}_gripper_palm_joint", wrist, palm, xyz="0.075 0 0"))
+    root.append(fixed_joint(f"{side}_gripper_palm_joint", wrist, palm, xyz="0.055 0 0"))
 
     for name, y, axis in (
-        (left_finger, 0.036 * sign, f"0 {sign:.1f} 0"),
-        (right_finger, -0.036 * sign, f"0 {-sign:.1f} 0"),
+        (left_finger, 0.026 * sign, f"0 {sign:.1f} 0"),
+        (right_finger, -0.026 * sign, f"0 {-sign:.1f} 0"),
     ):
         finger_link = ET.Element("link", {"name": name})
         add_inertial(finger_link, mass="0.05")
-        add_box_visual(finger_link, "0.055 0 0", "0.11 0.018 0.035", "0.12 0.12 0.13 1")
-        add_box_collision(finger_link, "0.055 0 0", "0.11 0.018 0.035")
+        add_box_visual(finger_link, "0.042 0 0", "0.084 0.010 0.024", "0.10 0.10 0.11 1")
+        add_box_collision(finger_link, "0.042 0 0", "0.084 0.010 0.024")
         root.append(finger_link)
 
         joint = ET.Element("joint", {"name": name.replace("_link", "_joint"), "type": "prismatic"})
-        ET.SubElement(joint, "origin", {"xyz": f"0.075 {y:.4f} 0", "rpy": "0 0 0"})
+        ET.SubElement(joint, "origin", {"xyz": f"0.060 {y:.4f} 0", "rpy": "0 0 0"})
         ET.SubElement(joint, "parent", {"link": palm})
         ET.SubElement(joint, "child", {"link": name})
         ET.SubElement(joint, "axis", {"xyz": axis})
-        ET.SubElement(joint, "limit", {"lower": "0.0", "upper": "0.035", "effort": "40", "velocity": "0.4"})
+        ET.SubElement(joint, "limit", {"lower": "0.0", "upper": "0.025", "effort": "30", "velocity": "0.4"})
         root.append(joint)
 
 

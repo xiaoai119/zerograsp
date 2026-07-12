@@ -127,10 +127,10 @@ def qpos_for_joints(joint_names: list[str], robot_uid: str) -> np.ndarray:
 def camera_defaults(robot_uid: str) -> tuple[list[float], list[float], list[float], list[float]]:
     if robot_uid == "unitree_h2_upper_gripper":
         return (
-            [1.45, 1.20, 1.05],
-            [0.30, 0.0, 0.48],
-            [1.05, 0.90, 0.78],
-            [0.48, 0.0, 0.52],
+            [1.35, 1.05, 0.85],
+            [0.34, 0.0, 0.34],
+            [1.00, 0.78, 0.62],
+            [0.48, 0.0, 0.35],
         )
     return (
         [1.85, 1.55, 1.35],

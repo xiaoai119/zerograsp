@@ -108,8 +108,8 @@ H2_UPPER_BODY_JOINT_DEFAULTS = {
     "right_wrist_pitch_joint": 0.0,
     "left_wrist_yaw_joint": 0.0,
     "right_wrist_yaw_joint": 0.0,
-    "left_gripper_inner_finger_joint": 0.026,
-    "left_gripper_outer_finger_joint": 0.026,
-    "right_gripper_inner_finger_joint": 0.026,
-    "right_gripper_outer_finger_joint": 0.026,
+    "left_gripper_inner_finger_joint": 0.018,
+    "left_gripper_outer_finger_joint": 0.018,
+    "right_gripper_inner_finger_joint": 0.018,
+    "right_gripper_outer_finger_joint": 0.018,
 }
