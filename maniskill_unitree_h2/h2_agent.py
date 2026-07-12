@@ -10,7 +10,10 @@ from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
 
+import numpy as np
+
 from .h2_constants import H2_DAE_URDF, H2_REST_QPOS, H2_STL_URDF
+from .h2_urdf_adapter import ensure_upper_body_gripper_urdf
 
 
 @register_agent()
@@ -49,3 +52,14 @@ class UnitreeH2DAEVisual(UnitreeH2STL):
     uid = "unitree_h2_dae_visual"
     urdf_path = str(H2_DAE_URDF)
 
+
+@register_agent()
+class UnitreeH2UpperGripper(UnitreeH2STL):
+    """H2 upper body with a simple mobile base and two-finger grippers."""
+
+    uid = "unitree_h2_upper_gripper"
+    urdf_path = str(ensure_upper_body_gripper_urdf())
+
+    keyframes = {
+        "rest": Keyframe(qpos=np.zeros(23, dtype=np.float32), pose=sapien.Pose()),
+    }

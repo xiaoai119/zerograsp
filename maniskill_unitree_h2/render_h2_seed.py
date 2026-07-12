@@ -20,14 +20,18 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 
-from .h2_agent import UnitreeH2DAEVisual, UnitreeH2STL  # noqa: F401
-from .h2_constants import H2_JOINT_NAMES, H2_REST_QPOS
+from .h2_agent import UnitreeH2DAEVisual, UnitreeH2STL, UnitreeH2UpperGripper  # noqa: F401
+from .h2_constants import H2_REST_QPOS_BY_JOINT, H2_UPPER_BODY_JOINT_DEFAULTS
 
 
 # Place the fixed pelvis high enough for the feet to sit near the table-scene
 # floor.  The yaw turns H2 toward the tabletop workspace for inspection.
 H2_ROOT_POSE = sapien.Pose(
     p=[0.95, 0.0, 1.05],
+    q=euler2quat(0.0, 0.0, np.pi),
+)
+H2_UPPER_ROOT_POSE = sapien.Pose(
+    p=[0.78, 0.0, 0.0],
     q=euler2quat(0.0, 0.0, np.pi),
 )
 
@@ -43,9 +47,11 @@ class PickClutterYCBH2Env(PickClutterYCBEnv):
     SUPPORTED_ROBOTS = [
         "unitree_h2_stl",
         "unitree_h2_dae_visual",
+        "unitree_h2_upper_gripper",
     ]
 
-    def __init__(self, *args: Any, robot_uids: str = "unitree_h2_stl", **kwargs: Any):
+    def __init__(self, *args: Any, robot_uids: str = "unitree_h2_upper_gripper", **kwargs: Any):
+        self._h2_robot_uid = robot_uids
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=0.0, **kwargs)
 
     @property
@@ -68,14 +74,19 @@ class PickClutterYCBH2Env(PickClutterYCBEnv):
         BaseEnv._load_agent(
             self,
             options,
-            H2_ROOT_POSE,
+            root_pose_for_robot(self._h2_robot_uid),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         super()._initialize_episode(env_idx, options)
-        qpos = np.repeat(H2_REST_QPOS[None, :], len(env_idx), axis=0)
+        active_joint_names = [joint.name for joint in self.agent.robot.get_active_joints()]
+        qpos = np.repeat(
+            qpos_for_joints(active_joint_names, self._h2_robot_uid)[None, :],
+            len(env_idx),
+            axis=0,
+        )
         self.agent.reset(qpos)
-        self.agent.robot.set_pose(H2_ROOT_POSE)
+        self.agent.robot.set_pose(root_pose_for_robot(self._h2_robot_uid))
 
 
 def parse_args() -> argparse.Namespace:
@@ -84,18 +95,49 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--robot-uid",
         choices=PickClutterYCBH2Env.SUPPORTED_ROBOTS,
-        default="unitree_h2_stl",
+        default="unitree_h2_upper_gripper",
     )
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
-    parser.add_argument("--camera-eye", type=float, nargs=3, default=[1.85, 1.55, 1.35])
-    parser.add_argument("--camera-target", type=float, nargs=3, default=[0.35, 0.0, 0.55])
+    parser.add_argument("--camera-eye", type=float, nargs=3, default=None)
+    parser.add_argument("--camera-target", type=float, nargs=3, default=None)
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("maniskill_unitree_h2/runs"),
     )
     return parser.parse_args()
+
+
+def root_pose_for_robot(robot_uid: str) -> sapien.Pose:
+    if robot_uid == "unitree_h2_upper_gripper":
+        return H2_UPPER_ROOT_POSE
+    return H2_ROOT_POSE
+
+
+def qpos_for_joints(joint_names: list[str], robot_uid: str) -> np.ndarray:
+    defaults = (
+        H2_UPPER_BODY_JOINT_DEFAULTS
+        if robot_uid == "unitree_h2_upper_gripper"
+        else H2_REST_QPOS_BY_JOINT
+    )
+    return np.array([defaults.get(name, 0.0) for name in joint_names], dtype=np.float32)
+
+
+def camera_defaults(robot_uid: str) -> tuple[list[float], list[float], list[float], list[float]]:
+    if robot_uid == "unitree_h2_upper_gripper":
+        return (
+            [1.45, 1.20, 1.05],
+            [0.30, 0.0, 0.48],
+            [1.05, 0.90, 0.78],
+            [0.48, 0.0, 0.52],
+        )
+    return (
+        [1.85, 1.55, 1.35],
+        [0.35, 0.0, 0.55],
+        [1.35, 1.15, 1.05],
+        [0.55, 0.0, 0.65],
+    )
 
 
 def normalize_rgb(frame: Any) -> np.ndarray:
@@ -123,6 +165,11 @@ def main() -> int:
 
     run_dir = args.output_dir / f"pickclutter_{args.robot_uid}_seed{args.seed:03d}"
     run_dir.mkdir(parents=True, exist_ok=True)
+    camera_eye, camera_target, closeup_eye, closeup_target = camera_defaults(args.robot_uid)
+    if args.camera_eye is not None:
+        camera_eye = list(args.camera_eye)
+    if args.camera_target is not None:
+        camera_target = list(args.camera_target)
 
     env = gym.make(
         "PickClutterYCBH2-v1",
@@ -148,16 +195,11 @@ def main() -> int:
         raw_env = env.unwrapped
         robot = raw_env.agent.robot
         active_joint_names = [joint.name for joint in robot.get_active_joints()]
-        if tuple(active_joint_names) != H2_JOINT_NAMES:
-            raise RuntimeError(
-                "Unexpected active-joint order: "
-                f"expected={H2_JOINT_NAMES}, actual={active_joint_names}"
-            )
 
-        set_render_camera(env, list(args.camera_eye), list(args.camera_target))
+        set_render_camera(env, camera_eye, camera_target)
         Image.fromarray(normalize_rgb(env.render())).save(image_path)
 
-        set_render_camera(env, [1.35, 1.15, 1.05], [0.55, 0.0, 0.65])
+        set_render_camera(env, closeup_eye, closeup_target)
         Image.fromarray(normalize_rgb(env.render())).save(closeup_path)
 
         qpos = robot.get_qpos().detach().cpu().numpy().reshape(-1)
@@ -178,6 +220,8 @@ def main() -> int:
             "robot_root_pose": robot.pose.raw_pose.detach().cpu().numpy().reshape(-1).tolist(),
             "active_joint_names": active_joint_names,
             "qpos": qpos.tolist(),
+            "camera_eye": camera_eye,
+            "camera_target": camera_target,
             "link_names": [link.name for link in robot.get_links()],
             "runtime_collision_shape_count": sum(runtime_collision_counts.values()),
             "runtime_collision_shape_link_counts": runtime_collision_counts,

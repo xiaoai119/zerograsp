@@ -85,3 +85,31 @@ H2_REST_QPOS = np.array(
     ],
     dtype=np.float32,
 )
+
+H2_REST_QPOS_BY_JOINT = dict(zip(H2_JOINT_NAMES, H2_REST_QPOS.tolist()))
+
+H2_UPPER_BODY_JOINT_DEFAULTS = {
+    "waist_yaw_joint": 0.0,
+    "waist_roll_joint": 0.0,
+    "waist_pitch_joint": 0.0,
+    "head_pitch_joint": 0.0,
+    "head_yaw_joint": 0.0,
+    "left_shoulder_pitch_joint": 0.25,
+    "right_shoulder_pitch_joint": 0.25,
+    "left_shoulder_roll_joint": 0.35,
+    "right_shoulder_roll_joint": -0.35,
+    "left_shoulder_yaw_joint": 0.0,
+    "right_shoulder_yaw_joint": 0.0,
+    "left_elbow_joint": 0.75,
+    "right_elbow_joint": 0.75,
+    "left_wrist_roll_joint": 0.0,
+    "right_wrist_roll_joint": 0.0,
+    "left_wrist_pitch_joint": 0.0,
+    "right_wrist_pitch_joint": 0.0,
+    "left_wrist_yaw_joint": 0.0,
+    "right_wrist_yaw_joint": 0.0,
+    "left_gripper_inner_finger_joint": 0.026,
+    "left_gripper_outer_finger_joint": 0.026,
+    "right_gripper_inner_finger_joint": 0.026,
+    "right_gripper_outer_finger_joint": 0.026,
+}
