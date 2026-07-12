@@ -5,7 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from .h2_constants import H2_STL_URDF, PACKAGE_ROOT
+from .h2_constants import H2_DESCRIPTION_ROOT, H2_STL_URDF, PACKAGE_ROOT
 
 
 GENERATED_ROOT = PACKAGE_ROOT / "maniskill_unitree_h2" / "generated"
@@ -37,9 +37,20 @@ def ensure_upper_body_gripper_urdf() -> Path:
     for side in ("left", "right"):
         add_simple_gripper(root, side)
 
+    absolutize_mesh_paths(root)
     indent(root)
     tree.write(H2_UPPER_BODY_GRIPPER_URDF, encoding="utf-8", xml_declaration=True)
     return H2_UPPER_BODY_GRIPPER_URDF
+
+
+def absolutize_mesh_paths(root: ET.Element) -> None:
+    """Make inherited H2 mesh paths independent of the generated URDF location."""
+
+    for mesh in root.findall(".//mesh"):
+        filename = mesh.attrib.get("filename")
+        if not filename or Path(filename).is_absolute():
+            continue
+        mesh.attrib["filename"] = str((H2_DESCRIPTION_ROOT / filename).resolve())
 
 
 def remove_subtrees(root: ET.Element, joint_names: tuple[str, ...]) -> None:
