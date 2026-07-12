@@ -98,3 +98,4 @@ maniskill_curobo_graspnet/runs/
 # Local datasets and large generated training data
 datasets/
 data/
+unitree_model/
